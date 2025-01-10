@@ -5,6 +5,8 @@ import { SwapModule } from './swap/swap.module';
 import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
 import { ENV_FILE_PATH } from 'utils/constants';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -16,9 +18,21 @@ import { ENV_FILE_PATH } from 'utils/constants';
       }),
       envFilePath: ENV_FILE_PATH,
     }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 10,
+      },
+    ]),
     SwapModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
