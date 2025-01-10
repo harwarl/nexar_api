@@ -14,7 +14,21 @@ export class SwapServiceV1 {
 
   async getTokens() {
     const url = `${this.configService.get(BASE_URL)}${TOKENS_PATH}`;
-    return this.makeHttpRequest(url);
+    const tokens = await this.makeHttpRequest(url);
+
+    return tokens
+      .map((token: any, index: number) => {
+        if (
+          token.name.includes('Bitcoin') ||
+          token.name.includes('ERC20') ||
+          token.name.includes('Binance') ||
+          token.name === 'Ethereum'
+        ) {
+          return token;
+        }
+        return null;
+      })
+      .filter((name: string | null) => name !== null);
   }
 
   async getMinimalAmount(from: string, to: string) {
