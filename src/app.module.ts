@@ -20,8 +20,8 @@ import { APP_GUARD } from '@nestjs/core';
     }),
     ThrottlerModule.forRoot([
       {
-        ttl: 2 * 60000,
-        limit: 20,
+        ttl: 60000,
+        limit: 10,
       },
     ]),
     SwapModule,

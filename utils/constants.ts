@@ -1,5 +1,6 @@
 export const GLOBAL_PREFIX = 'api';
 export const ENV_FILE_PATH = '.env';
+export const DEV = "DEV"
 
 /*------------------------------ URLs ------------------------------*/
 export const BASE_URL = 'BASE_URL';
