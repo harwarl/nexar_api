@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { SwapService } from './swap.service';
-import { SwapController } from './swap.controller';
+import { SwapServiceV1 } from './swap.service';
+import { SwapControllerV1 } from './swap.controller';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
@@ -14,8 +14,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       }),
       inject: [ConfigService],
     }),
+    ConfigModule,
   ],
-  controllers: [SwapController],
-  providers: [SwapService],
+  controllers: [SwapControllerV1],
+  providers: [SwapServiceV1],
 })
 export class SwapModule {}

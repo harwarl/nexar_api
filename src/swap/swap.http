@@ -1,0 +1,37 @@
+GET http://localhost:3000/api/v1/swap/tokens
+Content-Type: application/json
+
+###
+GET http://localhost:3000/api/v1/
+Content-Type: application/json
+
+###
+GET http://localhost:3000/api/v1/swap/min-amount/ade_tinu
+Content-Type: application/json
+
+###
+GET http://localhost:3000/api/v1/swap/exchange-amount/230/usdterc20_usdtsol
+Content-Type: application/json
+
+###
+GET http://localhost:3000/api/v1/swap/transactions/50727663e5d9a4
+Content-Type: application/json
+
+###
+POST http://localhost:3000/api/v1/swap/transactions
+Content-Type: application/json
+
+{
+  "from": "btc",
+  "to": "eth",
+  "address": "0x57f31ad4b64095347F87eDB1675566DAfF5EC886",
+  "amount": "0.00123",
+  "extraId": "",
+  "userId": "",
+  "contactEmail": "",
+  "refundAddress": "",
+  "refundExtraId": ""
+}
+
+
+

@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { SwapModule } from './swap/swap.module';
 import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
+import { ENV_FILE_PATH } from 'utils/constants';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import * as Joi from 'joi';
         BASE_URL: Joi.string().required(),
         API_KEY: Joi.string().required(),
       }),
-      envFilePath: '.env',
+      envFilePath: ENV_FILE_PATH,
     }),
     SwapModule,
   ],
