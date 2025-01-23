@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DEV, GLOBAL_PREFIX } from 'utils/constants';
-import { ThrottlerModule } from '@nestjs/throttler';
+// import { ThrottlerModule } from '@nestjs/throttler';
 import { VersioningType } from '@nestjs/common';
 
 async function bootstrap() {
