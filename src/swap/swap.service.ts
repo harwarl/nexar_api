@@ -19,9 +19,10 @@ export class SwapServiceV1 {
     return tokens
       .map((token: any, index: number) => {
         if (
-          token.name.includes('Bitcoin') ||
-          token.name.includes('ERC20') ||
-          token.name.includes('Binance') ||
+          token.name.includes('BNB') ||
+          token.name.includes('XRP') ||
+          token.name === 'Bitcoin' ||
+          token.name === 'Solana' ||
           token.name === 'Ethereum'
         ) {
           return token;
