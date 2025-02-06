@@ -21,6 +21,8 @@ export class SwapServiceV1 {
         if (
           token.name.includes('BNB') ||
           token.name.includes('XRP') ||
+          token.ticker.includes('usdterc20') ||
+          token.name.includes('Avalanche') ||
           token.name === 'Bitcoin' ||
           token.name === 'Solana' ||
           token.name === 'Ethereum'

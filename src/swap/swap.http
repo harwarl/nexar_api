@@ -18,7 +18,7 @@ GET http://localhost:3000/api/v1/swap/exchange-amount/230/usdterc20_usdtsol
 Content-Type: application/json
 
 ###
-GET http://localhost:3000/api/v1/swap/transactions/50727663e5d9a4
+GET http://localhost:3000/api/v1/swap/transactions/94a5b30ec753b8
 Content-Type: application/json
 
 ###
