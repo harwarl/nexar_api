@@ -23,6 +23,13 @@ export class SwapServiceV1 {
           token.name.includes('XRP') ||
           token.ticker.includes('usdterc20') ||
           token.ticker === 'op' ||
+          token.ticker === 'wbtcmatic' ||
+          token.ticker === 'maticusdce' ||
+          token.ticker === 'usdtmatic' ||
+          token.ticker === 'opusdce' ||
+          token.ticker === 'usdtop' ||
+          token.ticker === 'ethop' ||
+          token.ticker === 'daiop' ||
           token.ticker === 'matic' ||
           token.ticker === 'avax' ||
           token.name === 'Bitcoin' ||
