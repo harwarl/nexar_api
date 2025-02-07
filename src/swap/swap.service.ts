@@ -22,6 +22,8 @@ export class SwapServiceV1 {
           token.name.includes('BNB') ||
           token.name.includes('XRP') ||
           token.ticker.includes('usdterc20') ||
+          token.ticker === 'op' ||
+          token.ticker === 'pol' ||
           token.ticker === 'avax' ||
           token.name === 'Bitcoin' ||
           token.name === 'Solana' ||
