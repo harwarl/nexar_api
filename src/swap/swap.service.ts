@@ -32,6 +32,8 @@ export class SwapServiceV1 {
           token.ticker === 'ethop' ||
           token.ticker === 'daiop' ||
           token.ticker === 'matic' ||
+          token.ticker === 'doge' ||
+          token.ticker === 'pepe' ||
           token.ticker === 'avax' ||
           token.name === 'Bitcoin' ||
           token.name === 'Solana' ||
