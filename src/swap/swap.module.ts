@@ -3,6 +3,8 @@ import { SwapServiceV1 } from './swap.service';
 import { SwapControllerV1 } from './swap.controller';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { DatabaseModule } from 'src/database/database.module';
+import { transactionsProviders } from './schema/transaction.provider';
 
 @Module({
   imports: [
@@ -15,8 +17,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       inject: [ConfigService],
     }),
     ConfigModule,
+    DatabaseModule,
   ],
   controllers: [SwapControllerV1],
-  providers: [SwapServiceV1],
+  providers: [SwapServiceV1, ...transactionsProviders],
 })
 export class SwapModule {}

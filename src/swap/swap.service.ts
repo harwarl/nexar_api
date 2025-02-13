@@ -1,15 +1,18 @@
 import { HttpService } from '@nestjs/axios';
-import { HttpException, Injectable } from '@nestjs/common';
+import { HttpException, Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { API_KEY, BASE_URL, TOKENS_PATH } from '../../utils/constants';
 import { lastValueFrom } from 'rxjs';
 import { CreateTransactionDto } from './dto/createTransaction.dto';
+import { Transaction } from './types/transaction.interface';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class SwapServiceV1 {
   constructor(
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
+    @Inject('TRANSACTION_MODEL') private transactionModel: Model<Transaction>,
   ) {}
 
   async getTokens() {
@@ -58,7 +61,9 @@ export class SwapServiceV1 {
 
   async getTransactionFromId(transactionId: string) {
     const url = `${this.configService.get(BASE_URL)}transactions/${transactionId}/${this.configService.get<string>(API_KEY)}`;
-    return this.makeHttpRequest(url);
+    const tx = await this.makeHttpRequest(url);
+    if(tx.status === "")
+    return tx;
   }
 
   async createTransaction(createTransactionPayload: CreateTransactionDto) {
