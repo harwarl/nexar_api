@@ -13,4 +13,5 @@ export interface Transaction {
   createdAt: string;
   isPartner: boolean;
   depositReceivedAt: string;
+  volumeInUsdt: number;
 }

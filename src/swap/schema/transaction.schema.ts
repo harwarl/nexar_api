@@ -16,6 +16,7 @@ export const TransactionSchema = new mongoose.Schema(
     createdAt: Date,
     isPartner: Boolean,
     depositReceivedAt: Date,
+    volumeInUsdt: Number,
   },
   { timestamps: false },
 );

@@ -62,7 +62,22 @@ export class SwapServiceV1 {
   async getTransactionFromId(transactionId: string) {
     const url = `${this.configService.get(BASE_URL)}transactions/${transactionId}/${this.configService.get<string>(API_KEY)}`;
     const tx = await this.makeHttpRequest(url);
-    if(tx.status === "")
+    if (tx.status === 'finished') {
+      const tx_exists = await this.transactionModel.findOne({ txId: tx.id });
+      if (!tx_exists) {
+        const value = await this.getEstimatedExchangeAmount(
+          tx.amountSend,
+          tx.fromCurrency,
+          'usdtmatic',
+        );
+
+        await this.transactionModel.create({
+          ...tx,
+          txId: tx.id,
+          volumeInUsdt: value.estimatedAmount,
+        });
+      }
+    }
     return tx;
   }
 
