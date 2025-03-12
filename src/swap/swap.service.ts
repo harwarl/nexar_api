@@ -43,7 +43,10 @@ export class SwapServiceV1 {
           token.ticker === 'avax' ||
           token.name === 'Bitcoin' ||
           token.name === 'Solana' ||
-          token.name === 'Ethereum'
+          token.name === 'Ethereum' ||
+          token.ticker === 'usdc' ||
+          token.ticker === 'usdcbsc' ||
+          token.ticker === 'usdctrc20'
         ) {
           return token;
         }
