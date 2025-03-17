@@ -69,27 +69,48 @@ export class SwapServiceV1 {
     const url = `${this.configService.get(BASE_URL)}transactions/${transactionId}/${this.configService.get<string>(API_KEY)}`;
     const tx = await this.makeHttpRequest(url);
     if (tx.status === 'finished') {
-      const tx_exists = await this.transactionModel.findOne({ txId: tx.id });
-      if (!tx_exists) {
-        const value = await this.getEstimatedExchangeAmount(
-          tx.amountSend,
-          tx.fromCurrency,
-          'usdtmatic',
-        );
+      const value = await this.getEstimatedExchangeAmount(
+        tx.amountSend,
+        tx.fromCurrency,
+        'usdtmatic',
+      );
 
-        await this.transactionModel.create({
-          ...tx,
+      await this.transactionModel.updateOne(
+        {
           txId: tx.id,
-          volumeInUsdt: value.estimatedAmount,
-        });
-      }
+          inApp: true,
+        },
+        {
+          $setOnInsert: {
+            inApp: false,
+          },
+          $set: {
+            ...tx,
+            txId: tx.id,
+            volumeInUsdt: value.estimatedAmount,
+          },
+        },
+        {
+          upsert: true,
+        },
+      );
     }
+
     return tx;
   }
 
   async createTransaction(createTransactionPayload: CreateTransactionDto) {
     const url = `${this.configService.get(BASE_URL)}transactions/${this.configService.get<string>(API_KEY)}`;
-    return this.makeHttpRequest(url, false, createTransactionPayload);
+    const tx = await this.makeHttpRequest(url, false, createTransactionPayload);
+
+    await this.transactionModel.create({
+      ...tx,
+      inApp: true,
+      txId: tx.id,
+      volumeInUsdt: 0,
+    });
+
+    return tx;
   }
 
   async makeHttpRequest(url: string, get = true, data = {}) {

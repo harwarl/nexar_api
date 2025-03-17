@@ -19,7 +19,7 @@ Content-Type: application/json
 
 
 ###
-GET http://localhost:3000/api/v1/swap/transactions/94a5b30ec753b8
+GET http://localhost:4040/api/v1/swap/transactions/6a22bade776e7c
 Content-Type: application/json
 
 ###
@@ -27,7 +27,7 @@ GET http://localhost:3000/api/v1/swap/transactions/6a22bade776e7c
 Content-Type: application/json
 
 ###
-POST http://localhost:3000/api/v1/swap/transactions
+POST http://localhost:4040/api/v1/swap/transactions
 Content-Type: application/json
 
 {
