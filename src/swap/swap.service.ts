@@ -117,17 +117,23 @@ export class SwapServiceV1 {
     return tx;
   }
 
-  async isInAppTx(transactionId: string) {
+  async isInAppTx(transactionId: string, address: string) {
     const existingTx = await this.transactionModel.findOne({
       txId: transactionId,
+      payinAddress: address.toLowerCase(),
     });
-
+  
     return {
-      exists: !!existingTx,
-      inApp: existingTx?.inApp ?? null,
-      transaction: existingTx ?? null,
+      error: {
+        code: 0,
+        message: "Success"
+      },
+      data: {
+        result: !!existingTx
+      }
     };
   }
+
 
   async makeHttpRequest(url: string, get = true, data = {}) {
     try {
