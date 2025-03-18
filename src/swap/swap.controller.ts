@@ -31,10 +31,12 @@ export class SwapControllerV1 {
     return await this.swapService.getTransactionFromId(transactionId);
   }
 
-  @Get('transactions/inApp/:transactionId')
-  async isInAppTx(@Param('transactionId') transactionId: string) {
-    return await this.swapService.isInAppTx(transactionId);
+  @Post('transactions/inApp')
+  async isInAppTx(@Body() body: { transactionId: string; address: string }) {
+    const { transactionId, address } = body;
+    return await this.swapService.isInAppTx(transactionId, address);
   }
+
 
   @Post('transactions')
   async createTransaction(@Body() createTransactionDto: CreateTransactionDto) {
