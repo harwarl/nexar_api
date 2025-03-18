@@ -37,7 +37,6 @@ export class SwapControllerV1 {
     return await this.swapService.isInAppTx(transactionId, address);
   }
 
-
   @Post('transactions')
   async createTransaction(@Body() createTransactionDto: CreateTransactionDto) {
     return await this.swapService.createTransaction(createTransactionDto);

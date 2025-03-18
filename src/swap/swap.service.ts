@@ -46,7 +46,9 @@ export class SwapServiceV1 {
           token.name === 'Ethereum' ||
           token.ticker === 'usdc' ||
           token.ticker === 'usdcbsc' ||
-          token.ticker === 'usdctrc20'
+          token.ticker === 'usdctrc20' ||
+          token.ticker === 'ton' ||
+          token.ticker === 'xrp'
         ) {
           return token;
         }
@@ -121,19 +123,19 @@ export class SwapServiceV1 {
     const existingTx = await this.transactionModel.findOne({
       txId: transactionId,
       payinAddress: address.toLowerCase(),
+      inApp: true,
     });
-  
+
     return {
       error: {
         code: 0,
-        message: "Success"
+        message: 'Success',
       },
       data: {
-        result: !!existingTx
-      }
+        result: !!existingTx,
+      },
     };
   }
-
 
   async makeHttpRequest(url: string, get = true, data = {}) {
     try {
