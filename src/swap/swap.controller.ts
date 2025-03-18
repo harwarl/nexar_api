@@ -8,13 +8,13 @@ export class SwapControllerV1 {
 
   @Get('tokens')
   async getTokens() {
-    return this.swapService.getTokens();
+    return await this.swapService.getTokens();
   }
 
   @Get('min-amount/:from_to')
   async getMinimalAmount(@Param('from_to') tokens: string) {
     const [from, to] = tokens.split('_');
-    return this.swapService.getMinimalAmount(from, to);
+    return await this.swapService.getMinimalAmount(from, to);
   }
 
   @Get('exchange-amount/:amount/:from_to')
@@ -23,16 +23,21 @@ export class SwapControllerV1 {
     @Param('from_to') tokens: string,
   ) {
     const [from, to] = tokens.split('_');
-    return this.swapService.getEstimatedExchangeAmount(amount, from, to);
+    return await this.swapService.getEstimatedExchangeAmount(amount, from, to);
   }
 
   @Get('transactions/:transactionId')
   async getTransactionDetails(@Param('transactionId') transactionId: string) {
-    return this.swapService.getTransactionFromId(transactionId);
+    return await this.swapService.getTransactionFromId(transactionId);
+  }
+
+  @Get('transactions/inApp/:transactionId')
+  async isInAppTx(@Param('transactionId') transactionId: string) {
+    return await this.swapService.isInAppTx(transactionId);
   }
 
   @Post('transactions')
   async createTransaction(@Body() createTransactionDto: CreateTransactionDto) {
-    return this.swapService.createTransaction(createTransactionDto);
+    return await this.swapService.createTransaction(createTransactionDto);
   }
 }

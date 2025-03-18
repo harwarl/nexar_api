@@ -72,7 +72,7 @@ export class SwapServiceV1 {
       const tx_exists = await this.transactionModel.findOne({
         txId: tx.id,
       });
-      console.log({ tx_exists });
+
       const value = await this.getEstimatedExchangeAmount(
         tx.amountSend,
         tx.fromCurrency,
@@ -115,6 +115,18 @@ export class SwapServiceV1 {
     });
 
     return tx;
+  }
+
+  async isInAppTx(transactionId: string) {
+    const existingTx = await this.transactionModel.findOne({
+      txId: transactionId,
+    });
+
+    return {
+      exists: !!existingTx,
+      inApp: existingTx?.inApp ?? null,
+      transaction: existingTx ?? null,
+    };
   }
 
   async makeHttpRequest(url: string, get = true, data = {}) {
