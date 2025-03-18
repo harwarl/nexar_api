@@ -69,33 +69,37 @@ export class SwapServiceV1 {
     const url = `${this.configService.get(BASE_URL)}transactions/${transactionId}/${this.configService.get<string>(API_KEY)}`;
     const tx = await this.makeHttpRequest(url);
     if (tx.status === 'finished') {
+      const tx_exists = await this.transactionModel.findOne({
+        txId: tx.id,
+      });
+      console.log({ tx_exists });
       const value = await this.getEstimatedExchangeAmount(
         tx.amountSend,
         tx.fromCurrency,
         'usdtmatic',
       );
 
-      await this.transactionModel.updateOne(
-        {
-          txId: tx.id,
-          inApp: true,
-        },
-        {
-          $setOnInsert: {
-            inApp: false,
-          },
-          $set: {
-            ...tx,
-            txId: tx.id,
-            volumeInUsdt: value.estimatedAmount,
-          },
-        },
-        {
-          upsert: true,
-        },
-      );
-    }
+      const updateData = {
+        ...tx,
+        txId: tx.id,
+        volumeInUsdt: value.estimatedAmount,
+      };
 
+      if (!tx_exists) {
+        await this.transactionModel.create({
+          ...updateData,
+          inApp: false,
+        });
+      } else {
+        await this.transactionModel.updateOne(
+          { txId: tx.id },
+          {
+            ...updateData,
+            inApp: tx_exists.inApp === true,
+          },
+        );
+      }
+    }
     return tx;
   }
 
