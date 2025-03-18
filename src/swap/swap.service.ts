@@ -120,6 +120,7 @@ export class SwapServiceV1 {
   async isInAppTx(transactionId: string) {
     const existingTx = await this.transactionModel.findOne({
       txId: transactionId,
+      inApp: true,
     });
 
     return {
