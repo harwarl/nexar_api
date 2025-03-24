@@ -48,7 +48,10 @@ export class SwapServiceV1 {
           token.ticker === 'usdcbsc' ||
           token.ticker === 'usdctrc20' ||
           token.ticker === 'ton' ||
-          token.ticker === 'xrp'
+          token.ticker === 'xrp' ||
+          token.ticker === 'near' ||
+          token.ticker === 'ada' ||
+          token.ticker === 'trump'
         ) {
           return token;
         }
