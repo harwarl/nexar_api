@@ -15,4 +15,5 @@ export interface Transaction {
   depositReceivedAt: string;
   volumeInUsdt: number;
   inApp: boolean;
+  tokensDestination: string;
 }

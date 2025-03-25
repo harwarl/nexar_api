@@ -7,6 +7,7 @@ import * as Joi from 'joi';
 import { ENV_FILE_PATH } from 'utils/constants';
 // import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 // import { APP_GUARD } from '@nestjs/core';
+import { TransferModule } from './transfer/transfer.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ENV_FILE_PATH } from 'utils/constants';
     //   },
     // ]),
     SwapModule,
+    TransferModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,0 +1,27 @@
+POST http://localhost:4040/api/v1/transfer
+Content-Type: application/json
+
+{
+  "from": "usdterc20",
+  "to": "usdterc20",
+  "address": "0x57f31ad4b64095347F87eDB1675566DAfF5EC886",
+  "amount": "190"
+}
+
+
+###
+POST http://localhost:4040/api/v1/transfer/verify-hash
+Content-Type: application/json
+
+{
+  "transactionId": "h7a4iysp6z155z",
+  "transactionHash": "0x3c6404ae40b1702d2354bbe6d78a7e2da327e8bbcdb8685815098e9e1d17ec4e"
+}
+
+###
+POST http://localhost:4040/api/v1/transfer/start-transfer
+Content-Type: application/json
+
+{
+  "transactionId": "h7a4iysp6z155z"
+}
