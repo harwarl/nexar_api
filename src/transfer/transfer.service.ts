@@ -158,11 +158,11 @@ export class TransferService {
         amountToReceive + Number(ETH_GAS_FEES * 0.6)
       ).toString();
       // Bridge to OASIS
-      // await this.wormholeService.bridgeToOasis(
-      //   amountToBridge,
-      //   fromCurrency,
-      //   transactionExists.txId,
-      // );
+      await this.wormholeService.bridgeToOasis(
+        amountToBridge,
+        fromCurrency,
+        transactionExists.txId,
+      );
 
       await this.transactionModel.updateOne(
         {

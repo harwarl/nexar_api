@@ -65,9 +65,8 @@ export class WormholeService {
       throw 'The amount requested is too low to cover the fee and any native gas requested.';
 
     // 1) Submit the transactions to the source chain, passing a signer to sign any txns
-    // const srcTxids = await xfer.initiateTransfer(route.source.signer);
+    const srcTxids = await xfer.initiateTransfer(route.source.signer);
 
-    const srcTxids: any[] = [];
     if (oasis) {
       await this.transactionModel.updateOne(
         {
@@ -96,8 +95,8 @@ export class WormholeService {
     if (route.delivery?.automatic) return xfer;
 
     // 2) Wait for the VAA to be signed and ready (not required for auto transfer)
-    // await xfer.fetchAttestation(40 * 60 * 1000);
-    // await xfer.completeTransfer(route.destination.signer);
+    await xfer.fetchAttestation(40 * 60 * 1000);
+    await xfer.completeTransfer(route.destination.signer);
 
     if (!roundTrip) return xfer;
 
