@@ -8,10 +8,10 @@ export const API_KEY = 'API_KEY';
 export const TOKENS_PATH = 'currencies?active=true&fixedRate=true';
 
 /*------------------------------ CONTRACT ADDRESSES ------------------------------*/
-export const ETH_WETH = '';
-export const OASIS_WETH = '';
-export const ETH_USDT = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
-export const OASIS_USDT = '';
+export const OASIS_WETH: string = '0x3223f17957Ba502cbe71401D55A0DB26E5F7c68F';
+export const ETH_WETH: string = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
+export const OASIS_USDT: string = '0xdC19A122e268128B5eE20366299fc7b5b199C8e3';
+export const ETH_USDT: string = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
 export const USDT_MINIMUM = 100;
 export const ETH_MINIMUM = 0.05;
 
@@ -45,8 +45,8 @@ export enum STATUS {
   NEW = 'new',
   WAITING = 'waiting',
   CONFIRMING = 'confirming',
-  ORDER_CREATED = 'order created',
-  OASIS_CLAIM = 'oasis claim',
-  RECEIVER_ROUTING = 'receiver routing',
-  ORDER_COMPLETED = 'order completed',
+  ORDER_CREATED = 'order_created',
+  OASIS_CLAIM = 'oasis_claim',
+  RECEIVER_ROUTING = 'receiver_routing',
+  ORDER_COMPLETED = 'order_completed',
 }

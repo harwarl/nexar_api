@@ -158,11 +158,11 @@ export class TransferService {
         amountToReceive + Number(ETH_GAS_FEES * 0.6)
       ).toString();
       // Bridge to OASIS
-      await this.wormholeService.bridgeToOasis(
-        amountToBridge,
-        fromCurrency,
-        transactionExists.txId,
-      );
+      // await this.wormholeService.bridgeToOasis(
+      //   amountToBridge,
+      //   fromCurrency,
+      //   transactionExists.txId,
+      // );
 
       await this.transactionModel.updateOne(
         {
@@ -226,7 +226,7 @@ export class TransferService {
       const signer = new Wallet(process.env.ETH_PRIVATE_KEY_2!, provider);
 
       let tx: TransactionResponse;
-      if (ticker == ETH) {
+      if (ticker.toUpperCase() == ETH.toUpperCase()) {
         tx = await signer.sendTransaction({
           to: recipientAddress,
           value: parseEther(amountToSend),

@@ -16,4 +16,6 @@ export interface Transaction {
   volumeInUsdt: number;
   inApp: boolean;
   tokensDestination: string;
+  wormholeFirstHash: string;
+  wormholeSecondHash: string;
 }
