@@ -23,11 +23,11 @@ GET http://localhost:4040/api/v1/swap/transactions/6a22bade776e7c
 Content-Type: application/json
 
 ###
-GET http://localhost:4040/api/v1/swap/transactions/inApp/6a22bade776e7c
+GET http://localhost:4040/api/v1/swap/transactions/6a22bade776e7c
 Content-Type: application/json
 
 ###
-GET http://localhost:4040/api/v1/swap/transactions/6a22bade776e86
+GET http://localhost:4040/api/v1/swap/transactions/h7a4iysp6z155z
 Content-Type: application/json
 
 ###

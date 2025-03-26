@@ -18,6 +18,7 @@ export const TransactionSchema = new mongoose.Schema(
     depositReceivedAt: Date,
     volumeInUsdt: Number,
     inApp: Boolean,
+    isTransfer: Boolean,
     wormholeFirstHash: String,
     wormholeSecondHash: String,
   },

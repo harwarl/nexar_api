@@ -62,6 +62,7 @@ export class TransferService {
 
     let newTransaction = await this.transactionModel.create({
       txId: this.generateRandomTxId(),
+      isTransfer: true,
       payinAddress: BACKEND_WALLET_1,
       payoutAddress: BACKEND_WALLET_2,
       expectedSendAmount: amount,

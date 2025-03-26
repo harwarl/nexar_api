@@ -71,41 +71,51 @@ export class SwapServiceV1 {
   }
 
   async getTransactionFromId(transactionId: string) {
-    const url = `${this.configService.get(BASE_URL)}transactions/${transactionId}/${this.configService.get<string>(API_KEY)}`;
-    const tx = await this.makeHttpRequest(url);
-    if (tx.status === 'finished') {
-      const tx_exists = await this.transactionModel.findOne({
-        txId: tx.id,
-      });
+    const transactionExists = await this.transactionModel.findOne({
+      txId: transactionId,
+    });
 
-      const value = await this.getEstimatedExchangeAmount(
-        tx.amountSend,
-        tx.fromCurrency,
-        'usdtmatic',
-      );
-
-      const updateData = {
-        ...tx,
-        txId: tx.id,
-        volumeInUsdt: value.estimatedAmount,
-      };
-
-      if (!tx_exists) {
-        await this.transactionModel.create({
-          ...updateData,
-          inApp: false,
-        });
+    if (transactionExists) {
+      if (transactionExists.isTransfer) {
+        return transactionExists;
       } else {
-        await this.transactionModel.updateOne(
-          { txId: tx.id },
-          {
-            ...updateData,
-            inApp: tx_exists.inApp === true,
-          },
-        );
+        const url = `${this.configService.get(BASE_URL)}transactions/${transactionId}/${this.configService.get<string>(API_KEY)}`;
+        const tx = await this.makeHttpRequest(url);
+        if (tx.status === 'finished') {
+          const tx_exists = await this.transactionModel.findOne({
+            txId: tx.id,
+          });
+
+          const value = await this.getEstimatedExchangeAmount(
+            tx.amountSend,
+            tx.fromCurrency,
+            'usdtmatic',
+          );
+
+          const updateData = {
+            ...tx,
+            txId: tx.id,
+            volumeInUsdt: value.estimatedAmount,
+          };
+
+          if (!tx_exists) {
+            await this.transactionModel.create({
+              ...updateData,
+              inApp: false,
+            });
+          } else {
+            await this.transactionModel.updateOne(
+              { txId: tx.id },
+              {
+                ...updateData,
+                inApp: tx_exists.inApp === true,
+              },
+            );
+          }
+        }
+        return tx;
       }
     }
-    return tx;
   }
 
   async createTransaction(createTransactionPayload: CreateTransactionDto) {
@@ -114,6 +124,7 @@ export class SwapServiceV1 {
 
     await this.transactionModel.create({
       ...tx,
+      isTransfer: false,
       inApp: true,
       txId: tx.id,
       volumeInUsdt: 0,

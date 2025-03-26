@@ -18,4 +18,5 @@ export interface Transaction {
   tokensDestination: string;
   wormholeFirstHash: string;
   wormholeSecondHash: string;
+  isTransfer: boolean;
 }
