@@ -3,6 +3,7 @@ import {
   Inject,
   BadRequestException,
   NotFoundException,
+  BadGatewayException,
 } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { Transaction } from 'src/swap/types/transaction.interface';
@@ -126,71 +127,91 @@ export class TransferService {
   async startTransferProcess(startTransferDto: StartTransferTransactionDto) {
     const { transactionId } = startTransferDto;
 
-    const transactionExists = await this.transactionModel.findOne({
-      txId: transactionId,
-    });
+    const session = await this.transactionModel.startSession();
 
-    if (!transactionExists)
-      throw new BadRequestException('Invalid Transaction Id');
+    session.startTransaction();
 
-    if (transactionExists.status === 'finished') {
-      return {
-        success: true,
-        message: 'Transaction completed',
-      };
-    }
+    try {
+      // 1. Validate Transaction
+      const transactionExists = await this.transactionModel
+        .findOne({
+          txId: transactionId,
+        })
+        .session(session);
 
-    const { fromCurrency, toCurrency, expectedSendAmount } = transactionExists;
+      if (!transactionExists) {
+        throw new BadRequestException('Invalid Transaction Id');
+      }
 
-    if (fromCurrency !== toCurrency) {
-      throw new BadRequestException('Invalid Transfer Transaction');
-    }
+      if (transactionExists.status === 'finished') {
+        await session.commitTransaction();
+        return {
+          success: true,
+          message: 'Transaction completed',
+        };
+      }
 
-    // const minAmountRequired = minimumAmounts[fromCurrency];
+      const { fromCurrency, toCurrency } = transactionExists;
 
-    // if (!amountSend || Number(amountSend) < minAmountRequired) {
-    //   throw new BadRequestException(
-    //     `Insufficient amount. Minimum required for ${fromCurrency}: ${minAmountRequired}`,
-    //   );
-    // }
+      if (fromCurrency !== toCurrency) {
+        throw new BadRequestException('Invalid Transfer Transaction');
+      }
 
-    const successTx = await this.startTransactionListener(transactionExists);
-    const { txHash, sender, amountReceived: amountSend, error } = successTx;
+      // 2. Listen for payment
+      const paymentResult =
+        await this.startTransactionListener(transactionExists);
 
-    if (error) {
+      const {
+        txHash,
+        sender,
+        amountReceived: amountSend,
+        error: paymentResultError,
+      } = paymentResult;
+
+      if (paymentResultError) {
+        await this.transactionModel.updateOne(
+          {
+            txId: transactionExists.txId,
+          },
+          {
+            status: STATUS.FAILED,
+            reason: REASON.NO_AMOUNT,
+            updatedAt: new Date(),
+          },
+          {
+            session,
+          },
+        );
+
+        throw new Error(paymentResultError);
+      }
+
+      // 3. Update Initial Payment Status
       await this.transactionModel.updateOne(
         {
           txId: transactionExists.txId,
         },
         {
-          status: STATUS.FAILED,
-          reason: REASON.NO_AMOUNT,
+          status: STATUS.ORDER_CREATED,
+          payinHash: txHash,
+          sender,
+          amountSend,
+          updatedAt: new Date(),
+        },
+        {
+          session,
         },
       );
 
-      throw new Error(error);
-    }
-
-    await this.transactionModel.updateOne(
-      {
-        txId: transactionExists.txId,
-      },
-      {
-        status: STATUS.ORDER_CREATED,
-        payinHash: txHash,
-        sender,
-        amountSend,
-      },
-    );
-
-    // Start the transaction
-    try {
+      // 4. Calculate Amounts with Fee Protection
       const amountToReceive =
         Number(amountSend * (1 - FEE_PERCENTAGE)) - ETH_GAS_FEES;
 
       const amountToBridge = (
         amountToReceive + Number(ETH_GAS_FEES * 0.6)
       ).toString();
+
+      // 5. Execute Bridge Operations
       // Bridge to OASIS
       await this.wormholeService.bridgeToOasis(
         amountToBridge,
@@ -205,8 +226,11 @@ export class TransferService {
         {
           $set: {
             status: STATUS.OASIS_CLAIM,
-            sender,
+            updatedAt: new Date(),
           },
+        },
+        {
+          session,
         },
       );
 
@@ -224,10 +248,15 @@ export class TransferService {
         {
           $set: {
             status: STATUS.RECEIVER_ROUTING,
+            updatedAt: new Date(),
           },
+        },
+        {
+          session,
         },
       );
 
+      // 6. Final Transfer to Receiver
       // Send to reciever
       const tx = await this.transferToReciever(
         amountToReceive.toString(),
@@ -243,21 +272,32 @@ export class TransferService {
           $set: {
             status: STATUS.ORDER_COMPLETED,
             payoutHash: tx.hash,
+            updatedAt: new Date(),
           },
         },
+        { session },
       );
+
+      await session.commitTransaction();
+      return { success: true, message: 'Transaction Completed successfully' };
     } catch (error) {
-      console.error('Error in transfer process:', error);
+      await session.abortTransaction();
+      console.error('Transfer process failed:', error);
       await this.transactionModel.updateOne(
         {
           txId: transactionId,
         },
         {
           status: STATUS.FAILED,
-          reason: error.message,
+          reason: error.message?.substring(0, 200) || 'Unknown error',
+          updatedAt: new Date(),
         },
       );
-      throw new BadRequestException('Transaction failed, please try again.');
+      throw new BadRequestException(
+        error.message || 'Transaction failed, please try again.',
+      );
+    } finally {
+      session.endSession();
     }
   }
 
@@ -270,7 +310,7 @@ export class TransferService {
       const signer = new Wallet(process.env.ETH_PRIVATE_KEY_2!, provider);
 
       let tx: TransactionResponse;
-      if (ticker.toUpperCase() == ETH.toUpperCase()) {
+      if (ticker.toLowerCase() == ETH.toLowerCase()) {
         tx = await signer.sendTransaction({
           to: recipientAddress,
           value: parseEther(amountToSend),
@@ -360,7 +400,7 @@ export class TransferService {
       const timeout = setTimeout(() => {
         cleanup();
         reject(new Error('❌ Transaction not detected within timeout period'));
-      }, 900000); // 15 minutes Timeout
+      }, 600000); // 10 minutes Timeout
 
       const cleanup = () => {
         clearTimeout(timeout);
@@ -390,8 +430,9 @@ export class TransferService {
             throw new Error(`⚠️ Unsupported currency: ${fromCurrency}`);
           }
 
-          const minAmountRequired = minimumAmounts[fromCurrency];
+          const minAmountRequired = minimumAmounts[fromCurrency.toLowerCase()];
 
+          console.log({ minAmountRequired, amountReceived });
           if (amountReceived >= minAmountRequired) {
             console.log('⏳ Payment detected! Waiting for confirmation...');
 
@@ -409,7 +450,9 @@ export class TransferService {
                   error: null,
                 });
               } else {
-                throw new Error('❌ Transaction failed or reverted');
+                throw new BadRequestException(
+                  '❌ Transaction failed or reverted',
+                );
               }
             } catch (error) {
               cleanup();
@@ -421,7 +464,7 @@ export class TransferService {
             }
           }
         } catch (error) {
-          throw new Error(`Error fetching transaction: ${error}`);
+          throw new BadGatewayException(`Error fetching transaction: ${error}`);
         }
       };
 

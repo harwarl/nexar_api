@@ -12,6 +12,8 @@ export const OASIS_WETH: string = '0x3223f17957Ba502cbe71401D55A0DB26E5F7c68F';
 export const ETH_WETH: string = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
 export const OASIS_USDT: string = '0xdC19A122e268128B5eE20366299fc7b5b199C8e3';
 export const ETH_USDT: string = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
+
+/*------------------------------ MINIMUM VALUES ------------------------------*/
 export const USDT_MINIMUM = 100;
 export const ETH_MINIMUM = 0.05;
 
@@ -57,5 +59,6 @@ export enum REASON {
   INSUFFICIENT_AMOUNT = 'Insufficient Amount sent',
   NO_AMOUNT = 'No Amount sent',
 }
+
 /*------------------------------ SIGNATURE ------------------------------*/
 export const TRANSFER_SIGNATURE = '0xa9059cbb';

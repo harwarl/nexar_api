@@ -2,23 +2,25 @@ POST http://localhost:4040/api/v1/transfer
 Content-Type: application/json
 
 {
-  "from": "usdterc20",
-  "to": "usdterc20",
+  "from": "eth",
+  "to": "eth",
   "address": "0x57f31ad4b64095347F87eDB1675566DAfF5EC886",
-  "amount": "190"
+  "amount": "0.01"
 }
-
 
 ###
 POST http://localhost:4040/api/v1/transfer/verify-hash
 Content-Type: application/json
 
-{"transactionId": "6comqq1v7ae85e", "transactionHash": "0xad77fbb8f89893e92ed427f175e8bc8a7a4af0cf235aa3725a27f37e91367862"}
+{
+  "transactionId": "yfw7e7uhn6z9u4", 
+  "transactionHash": "0xad77fbb8f89893e92ed427f175e8bc8a7a4af0cf235aa3725a27f37e91367862"
+}
 
 ###
 POST http://localhost:4040/api/v1/transfer/start-transfer
 Content-Type: application/json
 
 {
-  "transactionId": "h7a4iysp6z155z"
+  "transactionId": "urqn8ffay2svy3"
 }
