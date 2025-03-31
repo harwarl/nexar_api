@@ -432,7 +432,7 @@ export class TransferService {
 
           const minAmountRequired = minimumAmounts[fromCurrency.toLowerCase()];
 
-          console.log({ minAmountRequired, amountReceived });
+          // console.log({ minAmountRequired, amountReceived });
           if (amountReceived >= minAmountRequired) {
             console.log('⏳ Payment detected! Waiting for confirmation...');
 
