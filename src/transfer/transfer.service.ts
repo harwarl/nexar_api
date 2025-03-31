@@ -31,6 +31,7 @@ import {
   STATUS,
   TRANSFER_SIGNATURE,
   USDT,
+  USDT_FEES,
 } from 'utils/constants';
 import { VerifyTransactionHashDto } from './dto/VerifyTransactionHash.dto';
 import { ABI, ERC20_Interface, provider, wssProvider } from 'utils/ethers';
@@ -65,12 +66,18 @@ export class TransferService {
       );
     }
 
+    const GAS =
+      from.toLowerCase() === ETH.toLowerCase() ? ETH_GAS_FEES : USDT_FEES;
+
+    const expectedReceiveAmount = Number(amount * (1 - FEE_PERCENTAGE)) - GAS;
+
     let newTransaction = await this.transactionModel.create({
       txId: this.generateRandomTxId(),
       isTransfer: true,
       payinAddress: BACKEND_WALLET_1,
       payoutAddress: BACKEND_WALLET_2,
       expectedSendAmount: amount,
+      expectedReceiveAmount,
       tokensDestination: address,
       inApp: true,
       volumeInUsdt: 0,
@@ -197,6 +204,7 @@ export class TransferService {
           sender,
           amountSend,
           updatedAt: new Date(),
+          depositReceivedAt: new Date(),
         },
         {
           session,
