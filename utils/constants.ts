@@ -49,4 +49,13 @@ export enum STATUS {
   OASIS_CLAIM = 'oasis_claim',
   RECEIVER_ROUTING = 'receiver_routing',
   ORDER_COMPLETED = 'order_completed',
+  FAILED = 'failed',
 }
+
+/*------------------------------ FAILURE_REASONS ------------------------------*/
+export enum REASON {
+  INSUFFICIENT_AMOUNT = 'Insufficient Amount sent',
+  NO_AMOUNT = 'No Amount sent',
+}
+/*------------------------------ SIGNATURE ------------------------------*/
+export const TRANSFER_SIGNATURE = '0xa9059cbb';

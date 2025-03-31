@@ -21,6 +21,8 @@ export const TransactionSchema = new mongoose.Schema(
     isTransfer: Boolean,
     wormholeFirstHash: String,
     wormholeSecondHash: String,
+    reason: String,
+    sender: String,
   },
   { timestamps: false },
 );

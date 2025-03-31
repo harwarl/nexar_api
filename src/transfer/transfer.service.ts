@@ -10,13 +10,14 @@ import { CreateTransferTransactionDto } from './dto/CreateTransferTransaction.dt
 import {
   Contract,
   formatEther,
+  formatUnits,
   parseEther,
   parseUnits,
   toBigInt,
   TransactionResponse,
   Wallet,
 } from 'ethers';
-import ERC20_ABI from '../abi/ERC20_abi.json';
+
 import {
   BACKEND_WALLET_1,
   BACKEND_WALLET_2,
@@ -25,10 +26,13 @@ import {
   ETH_USDT,
   FEE_PERCENTAGE,
   minimumAmounts,
+  REASON,
   STATUS,
+  TRANSFER_SIGNATURE,
+  USDT,
 } from 'utils/constants';
 import { VerifyTransactionHashDto } from './dto/VerifyTransactionHash.dto';
-import { provider } from 'utils/ethers';
+import { ABI, ERC20_Interface, provider, wssProvider } from 'utils/ethers';
 import { StartTransferTransactionDto } from './dto/StartTransferProcess.dto';
 import { WormholeService } from './wormhole.service';
 
@@ -136,19 +140,48 @@ export class TransferService {
       };
     }
 
-    const { fromCurrency, toCurrency, amountSend } = transactionExists;
+    const { fromCurrency, toCurrency, expectedSendAmount } = transactionExists;
 
     if (fromCurrency !== toCurrency) {
       throw new BadRequestException('Invalid Transfer Transaction');
     }
 
-    const minAmountRequired = minimumAmounts[fromCurrency];
+    // const minAmountRequired = minimumAmounts[fromCurrency];
 
-    if (!amountSend || Number(amountSend) < minAmountRequired) {
-      throw new BadRequestException(
-        `Insufficient amount. Minimum required for ${fromCurrency}: ${minAmountRequired}`,
+    // if (!amountSend || Number(amountSend) < minAmountRequired) {
+    //   throw new BadRequestException(
+    //     `Insufficient amount. Minimum required for ${fromCurrency}: ${minAmountRequired}`,
+    //   );
+    // }
+
+    const successTx = await this.startTransactionListener(transactionExists);
+    const { txHash, sender, amountReceived: amountSend, error } = successTx;
+
+    if (error) {
+      await this.transactionModel.updateOne(
+        {
+          txId: transactionExists.txId,
+        },
+        {
+          status: STATUS.FAILED,
+          reason: REASON.NO_AMOUNT,
+        },
       );
+
+      throw new Error(error);
     }
+
+    await this.transactionModel.updateOne(
+      {
+        txId: transactionExists.txId,
+      },
+      {
+        status: STATUS.ORDER_CREATED,
+        payinHash: txHash,
+        sender,
+        amountSend,
+      },
+    );
 
     // Start the transaction
     try {
@@ -172,6 +205,7 @@ export class TransferService {
         {
           $set: {
             status: STATUS.OASIS_CLAIM,
+            sender,
           },
         },
       );
@@ -214,6 +248,15 @@ export class TransferService {
       );
     } catch (error) {
       console.error('Error in transfer process:', error);
+      await this.transactionModel.updateOne(
+        {
+          txId: transactionId,
+        },
+        {
+          status: STATUS.FAILED,
+          reason: error.message,
+        },
+      );
       throw new BadRequestException('Transaction failed, please try again.');
     }
   }
@@ -233,7 +276,7 @@ export class TransferService {
           value: parseEther(amountToSend),
         });
       } else {
-        const usdtContract = new Contract(ETH_USDT, ERC20_ABI, signer);
+        const usdtContract = new Contract(ETH_USDT, ABI, signer);
         const decimals = await usdtContract.decimals();
         const amountInUnits = parseUnits(amountToSend, decimals);
 
@@ -297,6 +340,123 @@ export class TransferService {
         // amountInETh,
         // meetThreshold,
       };
+    }
+  }
+
+  async startTransactionListener(transaction: Transaction): Promise<{
+    txHash: string;
+    sender: string;
+    amountReceived: number;
+    error: any;
+  }> {
+    const { toCurrency, fromCurrency } = transaction;
+    if (toCurrency !== fromCurrency) {
+      throw new Error('From Currency must match the To Currency');
+    }
+
+    console.log(`Listening for Transactions to: ${BACKEND_WALLET_1}`);
+
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error('❌ Transaction not detected within timeout period'));
+      }, 900000); // 15 minutes Timeout
+
+      const cleanup = () => {
+        clearTimeout(timeout);
+        wssProvider.off('pending', pendingHandler);
+      };
+
+      const pendingHandler = async (txHash: string) => {
+        try {
+          const tx = await wssProvider.getTransaction(txHash);
+
+          if (
+            !tx ||
+            !tx.to ||
+            tx.to.toLowerCase() !== BACKEND_WALLET_1.toLowerCase()
+          ) {
+            return;
+          }
+
+          let amountReceived: number;
+          if (transaction.fromCurrency.toLowerCase() === ETH.toLowerCase()) {
+            amountReceived = parseFloat(formatEther(tx.value));
+          } else if (
+            transaction.fromCurrency.toLowerCase() === USDT.toLowerCase()
+          ) {
+            amountReceived = await this.decodeERC20TransferAmount(tx);
+          } else {
+            throw new Error(`⚠️ Unsupported currency: ${fromCurrency}`);
+          }
+
+          const minAmountRequired = minimumAmounts[fromCurrency];
+
+          if (amountReceived >= minAmountRequired) {
+            console.log('⏳ Payment detected! Waiting for confirmation...');
+
+            try {
+              const receipt = await wssProvider.waitForTransaction(txHash, 1);
+              if (receipt?.status === 1) {
+                console.log(
+                  `✅ Payment confirmed! Process started for transaction: ${txHash}`,
+                );
+                cleanup();
+                resolve({
+                  txHash,
+                  sender: tx.from,
+                  amountReceived: amountReceived,
+                  error: null,
+                });
+              } else {
+                throw new Error('❌ Transaction failed or reverted');
+              }
+            } catch (error) {
+              cleanup();
+              reject(
+                new Error(
+                  `⚠️ Transaction confirmation failed: ${error.message}`,
+                ),
+              );
+            }
+          }
+        } catch (error) {
+          throw new Error(`Error fetching transaction: ${error}`);
+        }
+      };
+
+      wssProvider.on('pending', pendingHandler);
+    });
+  }
+
+  async decodeERC20TransferAmount(tx: any): Promise<number> {
+    try {
+      if (!tx.to || !tx.data) {
+        throw new Error('Invalid Transaction object');
+      }
+      const contract = new Contract(tx.to, ABI, wssProvider);
+      const decimals = await contract.decimals();
+
+      const inputData = tx.data; // Raw Transaction Data
+      if (!inputData.toLowerCase().startWith(TRANSFER_SIGNATURE)) {
+        throw new Error('Not an ERC-20 transfer transaction');
+      }
+
+      const parsedTx = ERC20_Interface.parseTransaction(tx);
+
+      if (!parsedTx) {
+        throw new Error('Failed to parse transfer data');
+      }
+
+      const amount = parsedTx.args[1];
+      if (!amount) {
+        throw new Error('No amount found in transfer data');
+      }
+
+      return parseFloat(formatUnits(amount, decimals));
+    } catch (error) {
+      console.error('⚠️ Failed to decode ERC-20 transaction:', error);
+      throw error;
     }
   }
 }

@@ -13,10 +13,7 @@ Content-Type: application/json
 POST http://localhost:4040/api/v1/transfer/verify-hash
 Content-Type: application/json
 
-{
-  "transactionId": "h7a4iysp6z155z",
-  "transactionHash": "0x3c6404ae40b1702d2354bbe6d78a7e2da327e8bbcdb8685815098e9e1d17ec4e"
-}
+{"transactionId": "6comqq1v7ae85e", "transactionHash": "0xad77fbb8f89893e92ed427f175e8bc8a7a4af0cf235aa3725a27f37e91367862"}
 
 ###
 POST http://localhost:4040/api/v1/transfer/start-transfer
