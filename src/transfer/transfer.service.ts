@@ -108,18 +108,18 @@ export class TransferService {
     if (!validTransaction.meetThreshold)
       throw new BadRequestException('Amount does not meet threshold');
 
-    await this.transactionModel.updateOne(
-      {
-        txId: transactionId,
-      },
-      {
-        $set: {
-          status: STATUS.ORDER_CREATED,
-          payinHash: transactionHash,
-          amountSend: validTransaction.amountInETh,
-        },
-      },
-    );
+    // await this.transactionModel.updateOne(
+    //   {
+    //     txId: transactionId,
+    //   },
+    //   {
+    //     $set: {
+    //       status: STATUS.ORDER_CREATED,
+    //       payinHash: transactionHash,
+    //       amountSend: validTransaction.amountInETh,
+    //     },
+    //   },
+    // );
 
     return { success: true, message: 'Hash verified' };
   }
