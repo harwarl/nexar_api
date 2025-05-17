@@ -212,12 +212,14 @@ export class TransferService {
       );
 
       // 4. Calculate Amounts with Fee Protection
-      const amountToReceive =
-        Number(amountSend * (1 - FEE_PERCENTAGE)) - ETH_GAS_FEES;
+      const GAS =
+        fromCurrency.toLowerCase() === ETH.toLowerCase()
+          ? ETH_GAS_FEES
+          : USDT_FEES;
 
-      const amountToBridge = (
-        amountToReceive + Number(ETH_GAS_FEES * 0.6)
-      ).toString();
+      const amountToReceive = Number(amountSend * (1 - FEE_PERCENTAGE)) - GAS;
+
+      const amountToBridge = (amountToReceive + Number(GAS * 0.6)).toString();
 
       // 5. Execute Bridge Operations
       // Bridge to OASIS
