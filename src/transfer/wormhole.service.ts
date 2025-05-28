@@ -66,6 +66,7 @@ export class WormholeService {
 
     // 1) Submit the transactions to the source chain, passing a signer to sign any txns
     const srcTxids = await xfer.initiateTransfer(route.source.signer);
+    // console.log({ srcTxids });
 
     if (oasis) {
       await this.transactionModel.updateOne(
@@ -74,7 +75,7 @@ export class WormholeService {
         },
         {
           $set: {
-            wormholeSecondHash: srcTxids[1] ? srcTxids[0] : 'random',
+            wormholeSecondHash: srcTxids[0] ? srcTxids[0] : srcTxids[1],
           },
         },
       );
@@ -85,7 +86,7 @@ export class WormholeService {
         },
         {
           $set: {
-            wormholeFirstHash: srcTxids[1] ? srcTxids[0] : 'random2',
+            wormholeFirstHash: srcTxids[0] ? srcTxids[0] : srcTxids[1],
           },
         },
       );

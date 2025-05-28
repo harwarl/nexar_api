@@ -152,24 +152,17 @@ export class TransferService {
     this.currentBlock = await provider.getBlockNumber();
     const { transactionId } = startTransferDto;
 
-    const session = await this.transactionModel.startSession();
-
-    session.startTransaction();
-
     try {
       // 1. Validate Transaction
-      const transactionExists = await this.transactionModel
-        .findOne({
-          txId: transactionId,
-        })
-        .session(session);
+      const transactionExists = await this.transactionModel.findOne({
+        txId: transactionId,
+      });
 
       if (!transactionExists) {
         throw new BadRequestException('Invalid Transaction Id');
       }
 
       if (transactionExists.status === 'finished') {
-        await session.commitTransaction();
         return {
           success: true,
           message: 'Transaction completed',
@@ -203,9 +196,6 @@ export class TransferService {
             reason: REASON.NO_AMOUNT,
             updatedAt: new Date(),
           },
-          {
-            session,
-          },
         );
 
         throw new Error(paymentResultError);
@@ -223,9 +213,6 @@ export class TransferService {
           amountSend,
           updatedAt: new Date(),
           depositReceivedAt: new Date(),
-        },
-        {
-          session,
         },
       );
 
@@ -257,9 +244,6 @@ export class TransferService {
             updatedAt: new Date(),
           },
         },
-        {
-          session,
-        },
       );
 
       // Bridge to ETHEREUM
@@ -278,9 +262,6 @@ export class TransferService {
             status: STATUS.RECEIVER_ROUTING,
             updatedAt: new Date(),
           },
-        },
-        {
-          session,
         },
       );
 
@@ -303,13 +284,10 @@ export class TransferService {
             updatedAt: new Date(),
           },
         },
-        { session },
       );
 
-      await session.commitTransaction();
       return { success: true, message: 'Transaction Completed successfully' };
     } catch (error) {
-      await session.abortTransaction();
       console.error('Transfer process failed:', error);
       await this.transactionModel.updateOne(
         {
@@ -324,8 +302,6 @@ export class TransferService {
       throw new BadRequestException(
         error.message || 'Transaction failed, please try again.',
       );
-    } finally {
-      session.endSession();
     }
   }
 
@@ -522,7 +498,6 @@ export class TransferService {
     action: 'txlist' | 'tokentx',
   ) {
     const baseUrl = process.env.ETH_API_URL;
-    console.log({ action });
 
     let url = `${baseUrl}?module=account&action=${action}${action === 'tokentx' ? `contractaddress=${BACKEND_WALLET_1}` : ''}&address=${address}&startblock=${this.currentBlock - 20}&endblock=99999999&sort=desc&page=1&offset=10&apikey=${this.apiKey}`;
 
