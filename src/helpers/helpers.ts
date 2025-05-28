@@ -57,7 +57,6 @@ export async function getSigner<N extends Network, C extends Chain>(
       break;
     case 'Evm':
       const privateKey = PRIVATE_KEYS[walletId];
-      console.log({ privateKey });
       if (!privateKey) throw new Error(`Invalid wallet ID: ${walletId}`);
       signer = await (await evm()).getSigner(await chain.getRpc(), privateKey);
       break;
