@@ -22,5 +22,5 @@ POST http://localhost:4040/api/v1/transfer/start-transfer
 Content-Type: application/json
 
 {
-  "transactionId": "urqn8ffay2svy3"
+  "transactionId": "z3qrv2rrygrw2j"
 }

@@ -8,10 +8,12 @@ import {
 import { Model } from 'mongoose';
 import { Transaction } from 'src/swap/types/transaction.interface';
 import { CreateTransferTransactionDto } from './dto/CreateTransferTransaction.dto';
+import axios from 'axios';
 import {
   Contract,
   formatEther,
   formatUnits,
+  JsonRpcProvider,
   parseEther,
   parseUnits,
   toBigInt,
@@ -34,16 +36,31 @@ import {
   USDT_FEES,
 } from 'utils/constants';
 import { VerifyTransactionHashDto } from './dto/VerifyTransactionHash.dto';
-import { ABI, ERC20_Interface, provider, wssProvider } from 'utils/ethers';
+import { ABI, ERC20_Interface, provider } from 'utils/ethers';
 import { StartTransferTransactionDto } from './dto/StartTransferProcess.dto';
 import { WormholeService } from './wormhole.service';
 
 @Injectable()
 export class TransferService {
+  private apiKey = process.env.ES_API_KEY;
+  private currentBlock = 1000000;
+
+  // private activeListeners = new Map<string, NodeJS.Timeout>();
+  private activeListeners = new Map<string, { cleanup: () => void }>();
   constructor(
     private readonly wormholeService: WormholeService,
     @Inject('TRANSACTION_MODEL') private transactionModel: Model<Transaction>,
-  ) {}
+  ) {
+    this.initializeBlockTracker();
+  }
+
+  private async initializeBlockTracker() {
+    this.currentBlock = await provider.getBlockNumber();
+    console.log({ current: this.currentBlock });
+    setInterval(async () => {
+      this.currentBlock = await provider.getBlockNumber();
+    }, 15000);
+  }
 
   async createTransaction(
     createTransactionPayload: CreateTransferTransactionDto,
@@ -132,6 +149,7 @@ export class TransferService {
   }
 
   async startTransferProcess(startTransferDto: StartTransferTransactionDto) {
+    this.currentBlock = await provider.getBlockNumber();
     const { transactionId } = startTransferDto;
 
     const session = await this.transactionModel.startSession();
@@ -399,117 +417,255 @@ export class TransferService {
     amountReceived: number;
     error: any;
   }> {
-    const { toCurrency, fromCurrency } = transaction;
+    const { txId, toCurrency, fromCurrency, tokensDestination } = transaction;
     if (toCurrency !== fromCurrency) {
       throw new Error('From Currency must match the To Currency');
     }
 
-    console.log(`Listening for Transactions to: ${BACKEND_WALLET_1}`);
+    // Create unique key using txId, currency, and destination
+    const listenerKey = `${txId}-${fromCurrency.toLowerCase()}-${tokensDestination.toLowerCase()}`;
 
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        cleanup();
-        reject(new Error('❌ Transaction not detected within timeout period'));
-      }, 600000); // 10 minutes Timeout
+    if (this.activeListeners.has(listenerKey)) {
+      throw new BadRequestException(
+        `Listener already exists for transaction ${txId}`,
+      );
+    }
 
-      const cleanup = () => {
-        clearTimeout(timeout);
-        wssProvider.off('pending', pendingHandler);
-      };
+    console.log(`👥 [TX:${txId}] Starting listener for user`);
 
-      const pendingHandler = async (txHash: string) => {
+    return new Promise(async (resolve, reject) => {
+      const checkInterval = 15_000; // 15 seconds
+
+      const interval = setInterval(async () => {
         try {
-          const tx = await wssProvider.getTransaction(txHash);
-
-          if (
-            !tx ||
-            !tx.to ||
-            tx.to.toLowerCase() !== BACKEND_WALLET_1.toLowerCase()
-          ) {
-            return;
-          }
-
-          let amountReceived: number;
-          if (transaction.fromCurrency.toLowerCase() === ETH.toLowerCase()) {
-            amountReceived = parseFloat(formatEther(tx.value));
-          } else if (
-            transaction.fromCurrency.toLowerCase() === USDT.toLowerCase()
-          ) {
-            amountReceived = await this.decodeERC20TransferAmount(tx);
-          } else {
-            throw new Error(`⚠️ Unsupported currency: ${fromCurrency}`);
-          }
-
-          const minAmountRequired = minimumAmounts[fromCurrency.toLowerCase()];
-
-          // console.log({ minAmountRequired, amountReceived });
-          if (amountReceived >= minAmountRequired) {
-            console.log('⏳ Payment detected! Waiting for confirmation...');
-
-            try {
-              const receipt = await wssProvider.waitForTransaction(txHash, 1);
-              if (receipt?.status === 1) {
-                console.log(
-                  `✅ Payment confirmed! Process started for transaction: ${txHash}`,
-                );
-                cleanup();
-                resolve({
-                  txHash,
-                  sender: tx.from,
-                  amountReceived: amountReceived,
-                  error: null,
-                });
-              } else {
-                throw new BadRequestException(
-                  '❌ Transaction failed or reverted',
-                );
-              }
-            } catch (error) {
-              cleanup();
-              reject(
-                new Error(
-                  `⚠️ Transaction confirmation failed: ${error.message}`,
-                ),
-              );
-            }
+          const result = await this.checkTransactions(transaction);
+          if (result) {
+            cleanup();
+            resolve(result);
           }
         } catch (error) {
-          throw new BadGatewayException(`Error fetching transaction: ${error}`);
+          cleanup();
+          reject(error);
         }
+      }, checkInterval);
+
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error(`[TX:${txId}] Timeout after 10 minutes`));
+      }, 600000);
+
+      const cleanup = () => {
+        clearInterval(interval);
+        clearTimeout(timeout);
+        this.activeListeners.delete(listenerKey);
       };
 
-      wssProvider.on('pending', pendingHandler);
+      this.activeListeners.set(listenerKey, { cleanup });
     });
   }
 
-  async decodeERC20TransferAmount(tx: any): Promise<number> {
+  private async checkTransactions(transaction: Transaction): Promise<{
+    txHash: string;
+    sender: string;
+    amountReceived: number;
+    error: any;
+  } | null> {
+    const { txId, fromCurrency, tokensDestination, expectedSendAmount } =
+      transaction;
+    const isETH = fromCurrency.toLowerCase() === 'eth';
+    const address = BACKEND_WALLET_1;
+
     try {
-      if (!tx.to || !tx.data) {
-        throw new Error('Invalid Transaction object');
-      }
-      const contract = new Contract(tx.to, ABI, wssProvider);
-      const decimals = await contract.decimals();
+      // Fetch both normal and token transfers in parallel
+      const [normalTxs, tokenTxs] = await Promise.all([
+        this.fetchTransactions(address, 'txlist'),
+        isETH ? [] : this.fetchTransactions(address, 'tokentx'),
+      ]);
 
-      const inputData = tx.data; // Raw Transaction Data
-      if (!inputData.toLowerCase().startWith(TRANSFER_SIGNATURE)) {
-        throw new Error('Not an ERC-20 transfer transaction');
+      console.log({ normalTxs, tokenTxs });
+
+      // Combine and sort by timestamp (newest first)
+      const allTxs = [...normalTxs, ...tokenTxs].sort(
+        (a, b) => parseInt(b.timeStamp) - parseInt(a.timeStamp),
+      );
+
+      for (const tx of allTxs) {
+        try {
+          const amount = isETH
+            ? parseFloat(formatEther(tx.value))
+            : await this.decodeTokenAmount(tx);
+
+          if (
+            Math.abs(amount - expectedSendAmount) <=
+            expectedSendAmount * 0.01
+          ) {
+            return {
+              txHash: tx.hash,
+              sender: tx.from,
+              amountReceived: amount,
+              error: null,
+            };
+          }
+        } catch (error) {
+          console.warn(`[TX:${txId}] Error processing tx ${tx.hash}:`, error);
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error(`[TX:${txId}] Etherscan error:`, error);
+      throw new Error(`Transaction check failed: ${error.message}`);
+    }
+  }
+
+  private async fetchTransactions(
+    address: string,
+    action: 'txlist' | 'tokentx',
+  ) {
+    const baseUrl = process.env.ETH_API_URL;
+    console.log({ action });
+
+    let url = `${baseUrl}?module=account&action=${action}${action === 'tokentx' ? `contractaddress=${BACKEND_WALLET_1}` : ''}&address=${address}&startblock=${this.currentBlock - 20}&endblock=99999999&sort=desc&page=1&offset=10&apikey=${this.apiKey}`;
+
+    if (action === 'tokentx') {
+      url += `&contractaddress=${ETH_USDT.toLowerCase()}`;
+    }
+
+    console.log('[DEBUG] Final Etherscan URL:', url);
+
+    const response = await axios.get(url, { timeout: 5000 });
+
+    if (response.data.status !== '1') {
+      // throw new Error(response.data.message || 'Etherscan API error');
+      // // continue;
+      return [];
+    }
+
+    return response.data.result.map((tx: any) => ({
+      ...tx,
+      blockNumber: parseInt(tx.blockNumber),
+    }));
+  }
+
+  // async startTransactionListener(transaction: Transaction): Promise<{
+  //   txHash: string;
+  //   sender: string;
+  //   amountReceived: number;
+  //   error: any;
+  // }> {
+  //   const { toCurrency, fromCurrency } = transaction;
+  //   if (toCurrency !== fromCurrency) {
+  //     throw new Error('From Currency must match the To Currency');
+  //   }
+
+  //   console.log(`Listening for Transactions to: ${BACKEND_WALLET_1}`);
+
+  //   return new Promise((resolve, reject) => {
+  //     const timeout = setTimeout(() => {
+  //       cleanup();
+  //       reject(new Error('❌ Transaction not detected within timeout period'));
+  //     }, 600000); // 10 minutes Timeout
+
+  //     const cleanup = () => {
+  //       clearTimeout(timeout);
+  //       wssProvider.off('pending', pendingHandler);
+  //     };
+
+  //     const pendingHandler = async (txHash: string) => {
+  //       try {
+  //         const tx = await wssProvider.getTransaction(txHash);
+
+  //         if (
+  //           !tx ||
+  //           !tx.to ||
+  //           tx.to.toLowerCase() !== BACKEND_WALLET_1.toLowerCase()
+  //         ) {
+  //           return;
+  //         }
+
+  //         let amountReceived: number;
+  //         if (transaction.fromCurrency.toLowerCase() === ETH.toLowerCase()) {
+  //           amountReceived = parseFloat(formatEther(tx.value));
+  //         } else if (
+  //           transaction.fromCurrency.toLowerCase() === USDT.toLowerCase()
+  //         ) {
+  //           amountReceived = await this.decodeERC20TransferAmount(tx);
+  //         } else {
+  //           throw new Error(`⚠️ Unsupported currency: ${fromCurrency}`);
+  //         }
+
+  //         const minAmountRequired = minimumAmounts[fromCurrency.toLowerCase()];
+
+  //         // console.log({ minAmountRequired, amountReceived });
+  //         if (amountReceived >= minAmountRequired) {
+  //           console.log('⏳ Payment detected! Waiting for confirmation...');
+
+  //           try {
+  //             const receipt = await wssProvider.waitForTransaction(txHash, 1);
+  //             if (receipt?.status === 1) {
+  //               console.log(
+  //                 `✅ Payment confirmed! Process started for transaction: ${txHash}`,
+  //               );
+  //               cleanup();
+  //               resolve({
+  //                 txHash,
+  //                 sender: tx.from,
+  //                 amountReceived: amountReceived,
+  //                 error: null,
+  //               });
+  //             } else {
+  //               throw new BadRequestException(
+  //                 '❌ Transaction failed or reverted',
+  //               );
+  //             }
+  //           } catch (error) {
+  //             cleanup();
+  //             reject(
+  //               new Error(
+  //                 `⚠️ Transaction confirmation failed: ${error.message}`,
+  //               ),
+  //             );
+  //           }
+  //         }
+  //       } catch (error) {
+  //         throw new BadGatewayException(`Error fetching transaction: ${error}`);
+  //       }
+  //     };
+
+  //     wssProvider.on('pending', pendingHandler);
+  //   });
+  // }
+
+  async decodeTokenAmount(tx: any): Promise<number> {
+    try {
+      if (tx.tokenDecimal) {
+        return parseFloat(formatUnits(tx.value, tx.tokenDecimal));
       }
 
-      const parsedTx = ERC20_Interface.parseTransaction(tx);
+      const txn = await provider.getTransaction(tx.hash);
+      const parsedTx = ERC20_Interface.parseTransaction({
+        value: txn.value,
+        data: txn.data,
+      });
 
       if (!parsedTx) {
         throw new Error('Failed to parse transfer data');
       }
 
-      const amount = parsedTx.args[1];
-      if (!amount) {
-        throw new Error('No amount found in transfer data');
-      }
-
-      return parseFloat(formatUnits(amount, decimals));
+      if (!parsedTx || parsedTx.name !== 'transfer') return 0;
+      return parseFloat(formatEther(parsedTx.args[1]));
     } catch (error) {
       console.error('⚠️ Failed to decode ERC-20 transaction:', error);
       throw error;
     }
+  }
+
+  cancelListener(txId: string, currency: string, destination: string) {
+    const key = `${txId}-${currency.toLowerCase()}-${destination.toLowerCase()}`;
+    const listener = this.activeListeners.get(key);
+    if (listener) {
+      listener.cleanup();
+      return true;
+    }
+    return false;
   }
 }

@@ -19,6 +19,7 @@ export const TransactionSchema = new mongoose.Schema(
     volumeInUsdt: Number,
     inApp: Boolean,
     isTransfer: Boolean,
+    tokensDestination: String,
     wormholeFirstHash: String,
     wormholeSecondHash: String,
     reason: String,

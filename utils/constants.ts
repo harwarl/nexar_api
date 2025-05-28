@@ -15,7 +15,7 @@ export const ETH_USDT: string = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
 
 /*------------------------------ MINIMUM VALUES ------------------------------*/
 export const USDT_MINIMUM = 100;
-export const ETH_MINIMUM = 0.05;
+export const ETH_MINIMUM = 0.015;
 
 /*------------------------------ TOKEN TICKERS ------------------------------*/
 export const ETH = 'eth';
