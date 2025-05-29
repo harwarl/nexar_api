@@ -38,7 +38,7 @@ export enum CHAINS {
 }
 
 /*------------------------------ GAS FEES ------------------------------*/
-export const ETH_GAS_FEES: number = 0.01;
+export const ETH_GAS_FEES: number = 0.008;
 export const USDT_FEES: number = 27.5;
 export const FEE_PERCENTAGE: number = 0.01;
 
