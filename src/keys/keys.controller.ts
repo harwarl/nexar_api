@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query, Req } from '@nestjs/common';
 import { KeysService } from './keys.service';
 
 @Controller({ path: 'keys', version: '1' })
@@ -13,7 +13,7 @@ export class KeysController {
 
   // Validate the API Key
   @Get('validate')
-  async validateAPIKey(@Query('apikey') apikey: string) {
-    return this.keysService.validateAndVerifyAPIKey(apikey);
+  async validateAPIKey(@Req() req: any) {
+    return req['apiKeyPayload'];
   }
 }

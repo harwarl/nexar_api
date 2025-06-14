@@ -1,4 +1,9 @@
-import { Module } from '@nestjs/common';
+import {
+  MiddlewareConsumer,
+  Module,
+  NestModule,
+  RequestMethod,
+} from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SwapModule } from './swap/swap.module';
@@ -9,6 +14,8 @@ import { ENV_FILE_PATH } from 'utils/constants';
 // import { APP_GUARD } from '@nestjs/core';
 import { TransferModule } from './transfer/transfer.module';
 import { KeysModule } from './keys/keys.module';
+import { KeysService } from './keys/keys.service';
+import { ApiKeyMiddleware } from './middleware/key.middleware';
 
 @Module({
   imports: [
@@ -31,10 +38,15 @@ import { KeysModule } from './keys/keys.module';
   controllers: [AppController],
   providers: [
     AppService,
+    KeysService,
     // {
     //   provide: APP_GUARD,
     //   useClass: ThrottlerGuard,
     // },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(ApiKeyMiddleware).forRoutes('*');
+  }
+}

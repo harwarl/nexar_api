@@ -9,3 +9,9 @@ Content-Type: application/json
 ###
 GET http://localhost:4040/api/v1/keys/validate/?apikey=kjasdhkjdsh
 Content-Type: application/json
+
+
+###
+GET http://localhost:4040/api/v1/keys/validate/
+Content-Type: application/json
+x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
