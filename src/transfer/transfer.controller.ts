@@ -8,7 +8,7 @@ import { StartTransferTransactionDto } from './dto/StartTransferProcess.dto';
 export class TransferController {
   constructor(private readonly transferService: TransferService) {}
 
-  @Post('/')
+  // @Post('/')
   async createTransferTransaction(
     @Body() createTransferTransactionDto: CreateTransferTransactionDto,
   ) {
@@ -17,7 +17,7 @@ export class TransferController {
     );
   }
 
-  @Post('/verify-hash')
+  // @Post('/verify-hash')
   async verifyTransactionHash(
     @Body() verifyTransactionHashDto: VerifyTransactionHashDto,
   ) {
@@ -26,7 +26,7 @@ export class TransferController {
     );
   }
 
-  @Post('/start-transfer')
+  // @Post('/start-transfer')
   async startTransfer(@Body() startTransferDto: StartTransferTransactionDto) {
     return await this.transferService.startTransferProcess(startTransferDto);
   }
