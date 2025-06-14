@@ -17,15 +17,13 @@ import { KeysModule } from './keys/keys.module';
       validationSchema: Joi.object({
         BASE_URL: Joi.string().required(),
         API_KEY: Joi.string().required(),
+        ETH_RPC: Joi.string().required(),
+        ES_API_KEY: Joi.string().required(),
+        ETH_API_URL: Joi.string().required(),
+        MASTER_KEY: Joi.string().required(),
       }),
       envFilePath: ENV_FILE_PATH,
     }),
-    // ThrottlerModule.forRoot([
-    //   {
-    //     ttl: 60000,
-    //     limit: 10,
-    //   },
-    // ]),
     SwapModule,
     TransferModule,
     KeysModule,
