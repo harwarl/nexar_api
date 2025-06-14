@@ -19,6 +19,7 @@ export interface Transaction {
   wormholeFirstHash: string;
   wormholeSecondHash: string;
   isTransfer: boolean;
+  identifier?: string;
   reason?: string;
   sender?: string;
 }

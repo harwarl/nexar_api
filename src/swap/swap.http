@@ -8,31 +8,38 @@ Content-Type: application/json
 ###
 GET http://localhost:3000/api/v1/
 Content-Type: application/json
+x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
 
 ###
 GET http://localhost:3000/api/v1/swap/min-amount/ade_tinu
 Content-Type: application/json
+x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
 
 ###
 GET http://localhost:3000/api/v1/swap/exchange-amount/230/usdterc20_usdtsol
 Content-Type: application/json
+x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
 
 
 ###
 GET http://localhost:4040/api/v1/swap/transactions/6a22bade776e7c
 Content-Type: application/json
+x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
 
 ###
 GET http://localhost:4040/api/v1/swap/transactions/6a22bade776e7c
 Content-Type: application/json
+x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
 
 ###
 GET http://localhost:4040/api/v1/swap/transactions/h7a4iysp6z155z
 Content-Type: application/json
+x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
 
 ###
 POST http://localhost:4040/api/v1/swap/transactions
 Content-Type: application/json
+x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
 
 {
   "from": "btc",
@@ -45,6 +52,11 @@ Content-Type: application/json
   "refundAddress": "",
   "refundExtraId": ""
 }
+
+###
+GET http://localhost:4040/api/v1/swap/all_transactions
+Content-Type: application/json
+x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
 
 
 

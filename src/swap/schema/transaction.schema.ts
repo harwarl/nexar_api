@@ -24,6 +24,7 @@ export const TransactionSchema = new mongoose.Schema(
     wormholeSecondHash: String,
     reason: String,
     sender: String,
+    identifier: String,
   },
   { timestamps: false },
 );

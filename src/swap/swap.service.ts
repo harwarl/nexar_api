@@ -118,7 +118,10 @@ export class SwapServiceV1 {
     }
   }
 
-  async createTransaction(createTransactionPayload: CreateTransactionDto) {
+  async createTransaction(
+    createTransactionPayload: CreateTransactionDto,
+    identifier: string,
+  ) {
     const url = `${this.configService.get(BASE_URL)}transactions/${this.configService.get<string>(API_KEY)}`;
     const tx = await this.makeHttpRequest(url, false, createTransactionPayload);
 
@@ -128,9 +131,16 @@ export class SwapServiceV1 {
       inApp: true,
       txId: tx.id,
       volumeInUsdt: 0,
+      identifier,
     });
 
     return tx;
+  }
+
+  async getAllTransactionsUsingIdentifier(identifier: string) {
+    const txns = await this.transactionModel.find({ identifier });
+
+    return txns;
   }
 
   async isInAppTx(transactionId: string, address: string) {

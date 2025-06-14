@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req } from '@nestjs/common';
 import { SwapServiceV1 } from './swap.service';
 import { CreateTransactionDto } from './dto/createTransaction.dto';
 
@@ -38,7 +38,22 @@ export class SwapControllerV1 {
   }
 
   @Post('transactions')
-  async createTransaction(@Body() createTransactionDto: CreateTransactionDto) {
-    return await this.swapService.createTransaction(createTransactionDto);
+  async createTransaction(
+    @Body() createTransactionDto: CreateTransactionDto,
+    @Req() req: any,
+  ) {
+    const payload = req['apiKeyPayload'];
+    return await this.swapService.createTransaction(
+      createTransactionDto,
+      payload.identifier,
+    );
+  }
+
+  @Get('all_transactions')
+  async getAllTransactions(@Req() req: any) {
+    const payload = req['apiKeyPayload'];
+    return await this.swapService.getAllTransactionsUsingIdentifier(
+      payload.identifier,
+    );
   }
 }
