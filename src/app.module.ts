@@ -8,6 +8,7 @@ import { ENV_FILE_PATH } from 'utils/constants';
 // import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 // import { APP_GUARD } from '@nestjs/core';
 import { TransferModule } from './transfer/transfer.module';
+import { KeysModule } from './keys/keys.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { TransferModule } from './transfer/transfer.module';
     // ]),
     SwapModule,
     TransferModule,
+    KeysModule,
   ],
   controllers: [AppController],
   providers: [
