@@ -7,7 +7,7 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class KeysService {
-  private NO_OF_MONTHS = 5;
+  private NO_OF_MONTHS = 12;
   constructor(private readonly configService: ConfigService) {}
 
   // Validate a key
