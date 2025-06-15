@@ -1,8 +1,5 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import * as crypto from 'crypto';
-import { Key } from 'readline';
-import { Model } from 'mongoose';
-import { valid } from 'joi';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -36,10 +33,6 @@ export class KeysService {
     return key;
   }
 
-  private async _coupleKey() {}
-
-  private async _decoupleKey() {}
-
   // Generate a random key
   private _generateAPIKey(): string {
     // Get identifier
@@ -53,8 +46,6 @@ export class KeysService {
       .createHmac('sha256', this.configService.get('MASTER_KEY'))
       .update(data)
       .digest('hex');
-
-    console.log({ signature });
 
     const key = Buffer.from(`${data}:${signature}`).toString('base64url');
     return key;
@@ -83,7 +74,6 @@ export class KeysService {
         reason: isValid ? 'ok' : 'invalid_signature',
       };
     } catch (error) {
-      console.log({ error });
       return { valid: false, reason: 'malformed_token' };
     }
   }
