@@ -2,12 +2,14 @@ import {
   AcrossClient,
   createAcrossClient,
   GetQuoteParams,
+  Quote,
 } from '@across-protocol/app-sdk';
 import { Inject, Injectable } from '@nestjs/common';
 import { HDNodeWallet, Transaction, Wallet } from 'ethers';
 import { boolean } from 'joi';
 import { Model } from 'mongoose';
 import { SUPPORTED_TOKENS, TOKEN_ADDRESS } from 'utils/constants';
+import { Account, Chain, Transport, WalletClient } from 'viem';
 import { base, mainnet, arbitrumSepolia, baseSepolia } from 'viem/chains';
 
 @Injectable()
@@ -19,10 +21,54 @@ export class AcrossService {
     this.acrossClient = this.createAcrossClient();
   }
 
-  /*------------------------------ Private functions ------------------------------*/
+  // Execute the Quote
+  async executeQuote(
+    acrossClient: AcrossClient,
+    walletClient: WalletClient<Transport, Chain, Account>,
+    quoteDeposit: Quote['deposit'],
+  ) {
+    return await acrossClient.executeQuote({
+      walletClient,
+      deposit: quoteDeposit,
+      onProgress: async (progress) => {
+        if (progress.step === 'approve' && progress.status === 'txSuccess') {
+          console.log(
+            'Token approval successful:',
+            progress.txReceipt?.transactionHash,
+          );
+        }
+        if (progress.step === 'deposit' && progress.status === 'txSuccess') {
+          console.log(
+            'Deposit successful:',
+            progress.txReceipt?.transactionHash,
+          );
+        }
+        if (progress.step === 'fill' && progress.status === 'txSuccess') {
+          const { txReceipt, actionSuccess } = progress;
+          if (actionSuccess) {
+            console.log(
+              'Cross chain txs were successful:',
+              txReceipt?.transactionHash,
+            );
+          } else {
+            console.log(
+              'Cross chain txs were not successful:',
+              txReceipt?.transactionHash,
+            );
+          }
+        }
+        if (progress.status === 'simulationError') {
+          console.error('Simulation error:', progress);
+        }
+        if (progress.status === 'error' || progress.status === 'txError') {
+          console.error('Transaction error:', progress);
+        }
+      },
+    });
+  }
 
   // Get the Across Bridge Quote
-  private async getQuote(
+  async getQuote(
     acrossClient: AcrossClient,
     inputAmount: bigint,
     sourceChainId: number,
@@ -46,6 +92,7 @@ export class AcrossService {
     return await acrossClient.getQuote({ route, inputAmount });
   }
 
+  /*------------------------------ Private functions ------------------------------*/
   // Generate Wallets Need for the private transactions
   private async generateWallets(): Promise<{
     walletA: HDNodeWallet;
