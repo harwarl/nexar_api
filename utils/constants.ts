@@ -1,3 +1,5 @@
+import { arbitrumSepolia, base, baseSepolia, mainnet } from 'viem/chains';
+
 export const GLOBAL_PREFIX = 'api';
 export const ENV_FILE_PATH = '.env';
 export const DEV = 'DEV';
@@ -62,3 +64,31 @@ export enum REASON {
 
 /*------------------------------ SIGNATURE ------------------------------*/
 export const TRANSFER_SIGNATURE = '0xa9059cbb';
+
+// Supported chains
+export const SUPPORTED_CHAINS = [arbitrumSepolia, baseSepolia, mainnet, base];
+
+// Token Address of supported tokens
+export const TOKEN_ADDRESS: Record<
+  string,
+  { ETH: string; BASE: string; ARB_SEPOLIA: string; BASE_SEPOLIA: string }
+> = {
+  WETH: {
+    ETH: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // Ethereum Mainnet WETH
+    BASE: '0x4200000000000000000000000000000000000006', // Base Mainnet WETH
+    ARB_SEPOLIA: '',
+    BASE_SEPOLIA: '',
+  },
+  USDC: {
+    ETH: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // Ethereum Mainnet USDC
+    BASE: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // Base Mainnet USDC
+    ARB_SEPOLIA: '',
+    BASE_SEPOLIA: '',
+  },
+};
+
+// Supported Tokens
+export enum SUPPORTED_TOKENS {
+  WETH = 'WETH',
+  USDC = 'USDC',
+}
