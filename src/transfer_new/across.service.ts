@@ -5,20 +5,71 @@ import {
   Quote,
 } from '@across-protocol/app-sdk';
 import { Inject, Injectable } from '@nestjs/common';
-import { HDNodeWallet, Transaction, Wallet } from 'ethers';
-import { boolean } from 'joi';
+import { ConfigService } from '@nestjs/config';
+import { HDNodeWallet, Transaction } from 'ethers';
 import { Model } from 'mongoose';
 import { SUPPORTED_TOKENS, TOKEN_ADDRESS } from 'utils/constants';
-import { Account, Chain, Transport, WalletClient } from 'viem';
-import { base, mainnet, arbitrumSepolia, baseSepolia } from 'viem/chains';
+import { Account, Chain, http, Transport, WalletClient } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
+import {
+  base,
+  mainnet,
+  arbitrumSepolia,
+  baseSepolia,
+  arbitrum,
+} from 'viem/chains';
+import { createWalletClient } from 'viem';
 
 @Injectable()
 export class AcrossService {
   private acrossClient: AcrossClient;
   constructor(
     @Inject('TRANSACTION_MODEL') private transactionModel: Model<Transaction>,
+    private readonly configService: ConfigService,
   ) {
     this.acrossClient = this.createAcrossClient();
+  }
+
+  // Start Bridge Process, this accepts the amount to be bridged and the chains involved
+  // This simply calls the quote and the execute. functions again.
+  // The execute function is the actual bridge in here
+  async startBridge(
+    wallet: HDNodeWallet,
+    sourceChain: Chain,
+    destinationChain: Chain,
+    token: SUPPORTED_TOKENS,
+    amount: bigint,
+    fromETH: boolean = true,
+    isTestnet: boolean = false,
+  ) {
+    const quote = await this.getQuote(
+      this.acrossClient,
+      amount,
+      sourceChain.id,
+      destinationChain.id,
+      token,
+      fromETH,
+      token === SUPPORTED_TOKENS.WETH ? true : false,
+    );
+
+    if (!quote) return;
+
+    // Create the Wallet Client
+    // const isFromEth = sourceChain === arbitrumSepolia || mainnet ? true : false;
+    const walletClient = this.createUserWalletClient(
+      wallet.privateKey as `0x${string}`,
+      sourceChain,
+      fromETH,
+      isTestnet,
+    );
+    // Execute Bridge
+    const res = await this.executeQuote(
+      this.acrossClient,
+      walletClient,
+      quote.deposit,
+    );
+
+    return res;
   }
 
   // Execute the Quote
@@ -27,6 +78,9 @@ export class AcrossService {
     walletClient: WalletClient<Transport, Chain, Account>,
     quoteDeposit: Quote['deposit'],
   ) {
+    let result: { success: boolean; txHash?: string; error?: any } = {
+      success: false,
+    };
     return await acrossClient.executeQuote({
       walletClient,
       deposit: quoteDeposit,
@@ -50,21 +104,27 @@ export class AcrossService {
               'Cross chain txs were successful:',
               txReceipt?.transactionHash,
             );
+            result = { success: true, txHash: txReceipt?.transactionHash };
           } else {
             console.log(
               'Cross chain txs were not successful:',
               txReceipt?.transactionHash,
             );
+            result = { success: false, txHash: txReceipt?.transactionHash };
           }
         }
         if (progress.status === 'simulationError') {
           console.error('Simulation error:', progress);
+          result = { success: false, error: progress };
         }
         if (progress.status === 'error' || progress.status === 'txError') {
           console.error('Transaction error:', progress);
+          result = { success: false, error: progress };
         }
       },
     });
+
+    return result;
   }
 
   // Get the Across Bridge Quote
@@ -93,20 +153,43 @@ export class AcrossService {
   }
 
   /*------------------------------ Private functions ------------------------------*/
-  // Generate Wallets Need for the private transactions
-  private async generateWallets(): Promise<{
-    walletA: HDNodeWallet;
-    walletB: HDNodeWallet;
-  }> {
-    return {
-      walletA: Wallet.createRandom(),
-      walletB: Wallet.createRandom(),
-    };
-  }
 
   // convert the acrossclient to use testnets
   private useTestnet() {
     this.acrossClient = this.createAcrossClient(true);
+  }
+
+  private createUserWalletClient(
+    privateKey: `0x${string}`,
+    chain: Chain,
+    fromETH: boolean = true,
+    isTestnet: boolean = false,
+  ) {
+    let rpcUrl: string;
+    if (isTestnet) {
+      rpcUrl = fromETH
+        ? this.configService.get<string>('ARBITRUM_SEPOLIA_RPC_URL')
+        : this.configService.get<string>('BASE_TEST_RPC_URL');
+    } else {
+      rpcUrl = fromETH
+        ? this.configService.get<string>('MAINNET_RPC_URL')
+        : this.configService.get<string>('BASE_RPC_URL');
+    }
+
+    if (!rpcUrl) return;
+
+    // Get the account via viem
+    const account = privateKeyToAccount(privateKey);
+
+    // throw error if there is no account
+    if (!account) throw new Error('No account');
+
+    // Return the wallet client
+    return createWalletClient({
+      account,
+      transport: http(rpcUrl),
+      chain,
+    });
   }
 
   // create across client
