@@ -9,22 +9,23 @@ import { ConfigService } from '@nestjs/config';
 import { HDNodeWallet, Transaction } from 'ethers';
 import { Model } from 'mongoose';
 import { SUPPORTED_TOKENS, TOKEN_ADDRESS } from 'utils/constants';
-import { Account, Chain, http, Transport, WalletClient } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
 import {
-  base,
-  mainnet,
-  arbitrumSepolia,
-  baseSepolia,
-  arbitrum,
-} from 'viem/chains';
+  Account,
+  Chain,
+  http,
+  parseEther,
+  Transport,
+  WalletClient,
+} from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
+import { base, mainnet, arbitrumSepolia, baseSepolia } from 'viem/chains';
 import { createWalletClient } from 'viem';
 
 @Injectable()
 export class AcrossService {
   private acrossClient: AcrossClient;
   constructor(
-    @Inject('TRANSACTION_MODEL') private transactionModel: Model<Transaction>,
+    // @Inject('TRANSACTION_MODEL') private transactionModel: Model<Transaction>,
     private readonly configService: ConfigService,
   ) {
     this.acrossClient = this.createAcrossClient();
@@ -43,7 +44,6 @@ export class AcrossService {
     isTestnet: boolean = false,
   ) {
     const quote = await this.getQuote(
-      this.acrossClient,
       amount,
       sourceChain.id,
       destinationChain.id,
@@ -129,27 +129,57 @@ export class AcrossService {
 
   // Get the Across Bridge Quote
   async getQuote(
-    acrossClient: AcrossClient,
-    inputAmount: bigint,
+    inputAmount: bigint, // parsed Input
     sourceChainId: number,
     destinationChainId: number,
-    token: SUPPORTED_TOKENS, // could be WETH or USDC or any other supported
-    fromETH: boolean = true,
-    isNative: boolean = true,
+    token: SUPPORTED_TOKENS, // WETH or any supported tokens
+    fromETH = true, // Means sending chain is ETH
+    isNative = true, // If sending WETH
   ) {
+    const inputToken = TOKEN_ADDRESS[token][
+      fromETH ? 'ETH' : 'BASE'
+    ] as `0x${string}`;
+    const outputToken = TOKEN_ADDRESS[token][
+      fromETH ? 'BASE' : 'ETH'
+    ] as `0x${string}`;
+
     const route: GetQuoteParams['route'] = {
       originChainId: sourceChainId,
-      destinationChainId: destinationChainId,
-      inputToken: TOKEN_ADDRESS[token][
-        fromETH ? 'ETH' : 'BASE'
-      ] as `0x${string}`,
-      outputToken: TOKEN_ADDRESS[token][
-        fromETH ? 'BASE' : 'ETH'
-      ] as `0x${string}`,
+      destinationChainId,
+      inputToken,
+      outputToken,
       isNative,
     };
 
-    return await acrossClient.getQuote({ route, inputAmount });
+    return this.acrossClient.getQuote({ route, inputAmount });
+  }
+
+  // Adjust the input amount to include the fee
+  calculateFee(
+    inputAmount: bigint,
+    fees: Quote['fees'],
+  ): {
+    error?: string | null;
+    value: bigint | null;
+  } {
+    let b: bigint = fees.totalRelayFee.pct; // Get the percentage relayer fee
+
+    const SCALING_FACTOR = BigInt(1e18);
+
+    if (b > SCALING_FACTOR) {
+      return {
+        error: 'Relayer must not exceed 1e18 (100%)',
+        value: null,
+      };
+    }
+
+    const adjustedInputAmount =
+      (inputAmount * SCALING_FACTOR) / (SCALING_FACTOR - b);
+
+    return {
+      error: null,
+      value: adjustedInputAmount,
+    };
   }
 
   /*------------------------------ Private functions ------------------------------*/

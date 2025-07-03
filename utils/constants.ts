@@ -16,12 +16,15 @@ export const OASIS_USDT: string = '0xdC19A122e268128B5eE20366299fc7b5b199C8e3';
 export const ETH_USDT: string = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
 
 /*------------------------------ MINIMUM VALUES ------------------------------*/
-export const USDT_MINIMUM = 100;
-export const ETH_MINIMUM = 0.015;
+export const USDT_MINIMUM = 10;
+export const USDC_MINIMUM = 10;
+export const ETH_MINIMUM = 0.001;
 
 /*------------------------------ TOKEN TICKERS ------------------------------*/
 export const ETH = 'eth';
-export const USDT = 'usdterc20';
+export const USDT = 'usdt';
+export const USDC = 'usdc';
+export const WETH = 'weth';
 
 /*------------------------------ BACKEND WALLETS ------------------------------*/
 export const BACKEND_WALLET_1 = '0xef0C2f5b23717d1930f4EC61eAdC42D3e50Ac34e';
@@ -31,6 +34,7 @@ export const BACKEND_WALLET_2 = '0xBcA05C6b8091C07D03fd4E2BB094228C85FC552b';
 export const minimumAmounts: Record<string, number> = {
   [ETH]: ETH_MINIMUM,
   [USDT]: USDT_MINIMUM,
+  [USDC]: USDC_MINIMUM,
 };
 
 /*------------------------------ SUPPORTED CHAINS ------------------------------*/
@@ -91,7 +95,8 @@ export const TOKEN_ADDRESS: Record<
 export enum SUPPORTED_TOKENS {
   WETH = 'WETH',
   USDC = 'USDC',
+  USDT = 'USDT',
+  ETH = 'WETH',
 }
 
 // Supported Chains
-
