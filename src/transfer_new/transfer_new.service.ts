@@ -3,6 +3,7 @@ import { Model } from 'mongoose';
 import {
   erc20Abi,
   formatUnits,
+  isAddress,
   parseEther,
   parseUnits,
   Transaction,
@@ -29,7 +30,7 @@ export class TransferNewService {
   // Listeners available per request
   private activeListeners = new Map<string, { cleanup: () => void }>();
   constructor(
-    @Inject('TRANSACTION_MODEL') private transactionModel: Model<Transaction>,
+    @Inject('TRANSFER_MODEL') private transferTxnModel: Model<Transaction>, // TODO: Adjust that to match the new transaction
     private readonly acrossService: AcrossService,
   ) {}
 
@@ -41,20 +42,30 @@ export class TransferNewService {
       createTransactionPayload;
 
     // throw an error when there is incomplete parameters
-    if (!token || amount || !recipientAddress) {
+    if (!token || !amount || !recipientAddress) {
       throw new BadRequestException('Incomplete Parameters');
     }
 
+    // verify recipient address is EVM compatible
+    if (!isAddress(recipientAddress)) {
+      throw new BadRequestException('Invalid Recipient Address');
+    }
+
     // Validate minimum amount
-    if (!minimumAmounts[token] || minimumAmounts[token] < amount) {
+    if (
+      !minimumAmounts[token.toLowerCase()] ||
+      minimumAmounts[token.toLowerCase()] > amount
+    ) {
       throw new BadRequestException(
-        `Minimum amount for ${token} transfers is ${minimumAmounts[token]}`,
+        `Minimum amount for ${token} transfers is ${minimumAmounts[token.toLowerCase()]}`,
       );
     }
 
     // Dynamically determine decimals for parseUnits
-    const decimals = token === ETH || token === WETH ? 18 : 6;
+    console.log({ token, ETH, WETH, isIn: token.toLowerCase() in [ETH, WETH] });
+    const decimals = [ETH, WETH].includes(token.toLowerCase()) ? 18 : 6;
 
+    console.log({ decimals });
     // Format amount for quote
     const formattedAmount =
       decimals === 18
@@ -65,6 +76,8 @@ export class TransferNewService {
     const sourceChainId = isTestnet ? arbitrumSepolia.id : mainnet.id;
     const destinationChainId = isTestnet ? baseSepolia.id : base.id;
 
+    console.log({ sourceChainId, destinationChainId, formattedAmount });
+
     // Determine supported token
     // Ensure token is a key of SUPPORTED_TOKENS
     if (!(token in SUPPORTED_TOKENS)) {
@@ -74,7 +87,7 @@ export class TransferNewService {
       SUPPORTED_TOKENS[token as keyof typeof SUPPORTED_TOKENS];
 
     // Determine if fromETH
-    const fromETH = token === ETH || token === WETH;
+    const fromETH = token.toLowerCase() === ETH || token.toLowerCase() === WETH;
 
     // Get the Quote so as to add the gas
     const quote = await this.acrossService.getQuote(
@@ -85,6 +98,8 @@ export class TransferNewService {
       fromETH,
       fromETH,
     );
+
+    console.log({ quote });
 
     // throw an error if there is no quote or there is no deposit object
     if (!quote && !quote.deposit)
@@ -97,6 +112,8 @@ export class TransferNewService {
     const { error, value: expectedSendAmount } =
       this.acrossService.calculateFee(formattedAmount, quote.fees);
 
+    console.log({ error, expectedSendAmount });
+
     // throw error if there is any when calculating the adjusted fee
     if (error) {
       throw new BadRequestException(error);
@@ -104,12 +121,14 @@ export class TransferNewService {
 
     // Calculate the platform
     const { fee, amountAfterFee } = this.calculateplatformFee(formattedAmount);
+    console.log({ fee, amountAfterFee });
 
     if (!fee || !amountAfterFee)
       throw new BadRequestException('Could not calucate the fees');
 
     // generate two wallets for the user.
     const { walletA, walletB } = await this.generateWallets();
+    console.log({ walletA, walletB });
 
     // TODO: Save the entire Thing to the database.
 

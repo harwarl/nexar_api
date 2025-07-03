@@ -6,7 +6,7 @@ import {
 } from '@across-protocol/app-sdk';
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { HDNodeWallet, Transaction } from 'ethers';
+import { HDNodeWallet } from 'ethers';
 import { Model } from 'mongoose';
 import { SUPPORTED_TOKENS, TOKEN_ADDRESS } from 'utils/constants';
 import {
@@ -136,12 +136,15 @@ export class AcrossService {
     fromETH = true, // Means sending chain is ETH
     isNative = true, // If sending WETH
   ) {
+    console.log({ fromETH });
     const inputToken = TOKEN_ADDRESS[token][
       fromETH ? 'ETH' : 'BASE'
     ] as `0x${string}`;
     const outputToken = TOKEN_ADDRESS[token][
       fromETH ? 'BASE' : 'ETH'
     ] as `0x${string}`;
+
+    console.log({ inputToken, outputToken });
 
     const route: GetQuoteParams['route'] = {
       originChainId: sourceChainId,
@@ -151,7 +154,7 @@ export class AcrossService {
       isNative,
     };
 
-    return this.acrossClient.getQuote({ route, inputAmount });
+    return await this.acrossClient.getQuote({ route, inputAmount });
   }
 
   // Adjust the input amount to include the fee

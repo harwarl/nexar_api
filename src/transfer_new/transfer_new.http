@@ -1,0 +1,10 @@
+POST http://localhost:4040/api/transfer-new/create_transaction
+Content-Type: application/json
+x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
+
+{
+    "token": "ETH",
+    "recipientAddress": "0x15EB1380e150385ac4fe769Fee9c75D1CDe93Fec",
+    "amount": 0.01, 
+    "isTestnet": false
+}
