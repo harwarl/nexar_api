@@ -75,19 +75,19 @@ export const SUPPORTED_CHAINS = [arbitrumSepolia, baseSepolia, mainnet, base];
 // Token Address of supported tokens
 export const TOKEN_ADDRESS: Record<
   string,
-  { ETH: string; BASE: string; ARB_SEPOLIA: string; BASE_SEPOLIA: string }
+  { ETH: string; BASE: string; SEPOLIA: string; BASE_SEPOLIA: string }
 > = {
   WETH: {
     ETH: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // Ethereum Mainnet WETH
     BASE: '0x4200000000000000000000000000000000000006', // Base Mainnet WETH
-    ARB_SEPOLIA: '',
-    BASE_SEPOLIA: '',
+    SEPOLIA: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14', // Sepolia testnet WETH
+    BASE_SEPOLIA: '0x4200000000000000000000000000000000000006', // Ethereum Mainnet
   },
   USDC: {
     ETH: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // Ethereum Mainnet USDC
     BASE: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // Base Mainnet USDC
-    ARB_SEPOLIA: '',
-    BASE_SEPOLIA: '',
+    SEPOLIA: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+    BASE_SEPOLIA: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
   },
 };
 

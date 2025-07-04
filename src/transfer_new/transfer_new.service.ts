@@ -9,16 +9,26 @@ import {
   Transaction,
 } from 'viem';
 import { AcrossService } from './across.service';
+import * as crypto from 'crypto';
 import { Contract, HDNodeWallet, JsonRpcProvider, Wallet } from 'ethers';
 import {
   ETH,
   minimumAmounts,
+  STATUS,
   SUPPORTED_TOKENS,
   TOKEN_ADDRESS,
   WETH,
 } from 'utils/constants';
 import { CreateTransferTransactionDto } from './dto/CreateTransferTxn.dto';
-import { arbitrumSepolia, base, baseSepolia, mainnet } from 'viem/chains';
+import {
+  arbitrumSepolia,
+  base,
+  baseSepolia,
+  mainnet,
+  sepolia,
+} from 'viem/chains';
+import { Transfer } from './types/transfer.interface';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class TransferNewService {
@@ -26,13 +36,20 @@ export class TransferNewService {
   //   private currentBlock = 1000000;
   private BACKEND_WALLET: `0x${string}`;
   private platformFee: number = 1; // this is one percent
+  private IV_LENGTH: number = 12; // random bytes length
+  private ENCRYPTION_KEY: string; // encryption key
+  private ENCRYPTION_SALT: string; // Salt for encryption
 
   // Listeners available per request
   private activeListeners = new Map<string, { cleanup: () => void }>();
   constructor(
-    @Inject('TRANSFER_MODEL') private transferTxnModel: Model<Transaction>, // TODO: Adjust that to match the new transaction
+    @Inject('TRANSFER_MODEL') private transferTxnModel: Model<Transfer>,
     private readonly acrossService: AcrossService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.ENCRYPTION_KEY = configService.get<string>('ENCRYPTION_KEY');
+    this.ENCRYPTION_SALT = configService.get<string>('SALT');
+  }
 
   // Create transaction and send transaction details to the USER
   async createTransaction(
@@ -73,7 +90,7 @@ export class TransferNewService {
         : parseUnits(amount.toString(), decimals);
 
     // Determine chain IDs
-    const sourceChainId = isTestnet ? arbitrumSepolia.id : mainnet.id;
+    const sourceChainId = isTestnet ? sepolia.id : mainnet.id;
     const destinationChainId = isTestnet ? baseSepolia.id : base.id;
 
     console.log({ sourceChainId, destinationChainId, formattedAmount });
@@ -95,6 +112,7 @@ export class TransferNewService {
       sourceChainId,
       destinationChainId,
       supportedToken,
+      isTestnet,
       fromETH,
       fromETH,
     );
@@ -130,17 +148,43 @@ export class TransferNewService {
     const { walletA, walletB } = await this.generateWallets();
     console.log({ walletA, walletB });
 
-    // TODO: Save the entire Thing to the database.
-
     // TODO: Hash the wallets involved in this transaction
+    const walletAEncrypted = this.encryptObject(walletA);
+    const walletBEncrypted = this.encryptObject(walletB);
+
+    console.log({ walletAEncrypted, walletBEncrypted });
+
+    // TODO: Save the entire Thing to the database.
+    const newTransferTxn = await this.transferTxnModel.create({
+      txId: this.generateRandomTxId(),
+      payinAddress: walletA.address,
+      payoutAddress: walletB.address,
+      expectedSendAmount: Number(formatUnits(expectedSendAmount, decimals)),
+      expectedReceiveAmount: Number(formatUnits(amountAfterFee, decimals)),
+      recipientAddress: recipientAddress,
+      status: STATUS.NEW,
+      payinHash: '',
+      payoutHash: '',
+      identifier: '',
+      firstBridgeHash: '',
+      secondBridgeHash: '',
+      internalTransferHash: '',
+      transferToReceiverHash: '',
+      fromCurrency: supportedToken,
+      toCurrency: supportedToken,
+      amountSent: 0,
+      senderAddress: '',
+      walletA: walletAEncrypted,
+      walletB: walletBEncrypted,
+    });
+
+    delete newTransferTxn.walletA;
+    delete newTransferTxn.walletB;
 
     // TODO: get a transaction ID
     return {
       success: true,
-      expectedSendAmount: formatUnits(expectedSendAmount, decimals),
-      expectedRecieveAmount: formatUnits(amountAfterFee, decimals),
-      payinAddress: walletA.address,
-      payoutAddress: walletB.address,
+      transaction: newTransferTxn,
     };
   }
 
@@ -226,5 +270,57 @@ export class TransferNewService {
       walletA: Wallet.createRandom(),
       walletB: Wallet.createRandom(),
     };
+  }
+
+  private generateRandomTxId() {
+    const chars = '0123456789abcdefghijklmnopqrstuvwxyz';
+    let txId = '';
+
+    for (let i = 0; i < 14; i++) {
+      txId += chars[Math.floor(Math.random() * chars.length)];
+    }
+
+    return txId;
+  }
+
+  private encryptObject(obj: any): string {
+    const key = this.getKey(); // already a Buffer
+    const iv = crypto.randomBytes(this.IV_LENGTH);
+
+    const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+
+    const json = JSON.stringify(obj);
+    let encrypted = cipher.update(json, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    const authTag = cipher.getAuthTag();
+
+    return [iv.toString('hex'), authTag.toString('hex'), encrypted].join(':');
+  }
+
+  private decryptObject(encrypted: string): any {
+    const [ivHex, authTagHex, encryptedData] = encrypted.split(':');
+    const iv = Buffer.from(ivHex, 'hex');
+    const authTag = Buffer.from(authTagHex, 'hex');
+    const key = this.getKey();
+
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(authTag);
+
+    let decrypted = decipher.update(encryptedData, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return JSON.parse(decrypted);
+  }
+
+  private getKey() {
+    console.log({ ecncrytion_salt: this.ENCRYPTION_SALT });
+    console.log({ encryption_key: this.ENCRYPTION_KEY });
+
+    return crypto.pbkdf2Sync(
+      this.ENCRYPTION_KEY,
+      this.ENCRYPTION_SALT,
+      100_000,
+      32,
+      'sha256',
+    );
   }
 }

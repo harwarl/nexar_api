@@ -4,7 +4,7 @@ import {
   GetQuoteParams,
   Quote,
 } from '@across-protocol/app-sdk';
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HDNodeWallet } from 'ethers';
 import { Model } from 'mongoose';
@@ -28,7 +28,7 @@ export class AcrossService {
     // @Inject('TRANSACTION_MODEL') private transactionModel: Model<Transaction>,
     private readonly configService: ConfigService,
   ) {
-    this.acrossClient = this.createAcrossClient();
+    this.acrossClient = this.createAcrossClient(); // Starting with testnet
   }
 
   // Start Bridge Process, this accepts the amount to be bridged and the chains involved
@@ -133,18 +133,34 @@ export class AcrossService {
     sourceChainId: number,
     destinationChainId: number,
     token: SUPPORTED_TOKENS, // WETH or any supported tokens
-    fromETH = true, // Means sending chain is ETH
-    isNative = true, // If sending WETH
+    isTestnet: boolean = false, // Check for testnet
+    fromETH: boolean = true, // Means sending chain is ETH
+    isNative: boolean = true, // If sending WETH
   ) {
     console.log({ fromETH });
-    const inputToken = TOKEN_ADDRESS[token][
-      fromETH ? 'ETH' : 'BASE'
-    ] as `0x${string}`;
-    const outputToken = TOKEN_ADDRESS[token][
-      fromETH ? 'BASE' : 'ETH'
-    ] as `0x${string}`;
+    let inputToken: `0x${string}`;
+    let outputToken: `0x${string}`;
+
+    if (isTestnet) {
+      // ensure the across client is testnet based
+      inputToken = TOKEN_ADDRESS[token][
+        fromETH ? 'SEPOLIA' : 'BASE_SEPOLIA'
+      ] as `0x${string}`;
+      outputToken = TOKEN_ADDRESS[token][
+        fromETH ? 'BASE_SEPOLIA' : 'SEPOLIA'
+      ] as `0x${string}`;
+    } else {
+      inputToken = TOKEN_ADDRESS[token][
+        fromETH ? 'ETH' : 'BASE'
+      ] as `0x${string}`;
+      outputToken = TOKEN_ADDRESS[token][
+        fromETH ? 'BASE' : 'ETH'
+      ] as `0x${string}`;
+    }
 
     console.log({ inputToken, outputToken });
+    if (inputToken.length == 0 || outputToken.length == 0)
+      throw new BadRequestException('Token not supported');
 
     const route: GetQuoteParams['route'] = {
       originChainId: sourceChainId,
@@ -154,7 +170,14 @@ export class AcrossService {
       isNative,
     };
 
-    return await this.acrossClient.getQuote({ route, inputAmount });
+    try {
+      return await this.acrossClient.getQuote({
+        route,
+        inputAmount,
+      });
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
   }
 
   // Adjust the input amount to include the fee
@@ -188,9 +211,9 @@ export class AcrossService {
   /*------------------------------ Private functions ------------------------------*/
 
   // convert the acrossclient to use testnets
-  private useTestnet() {
-    this.acrossClient = this.createAcrossClient(true);
-  }
+  // private useTestnet(useTestnet: boolean) {
+  //   this.acrossClient = this.createAcrossClient(useTestnet);
+  // }
 
   private createUserWalletClient(
     privateKey: `0x${string}`,
@@ -227,7 +250,7 @@ export class AcrossService {
 
   // create across client
   // set the use of testnet to false
-  private createAcrossClient(isTestnet: boolean = false): AcrossClient {
+  private createAcrossClient(isTestnet: boolean = true): AcrossClient {
     return createAcrossClient({
       integratorId: '0xdead',
       chains: [arbitrumSepolia, baseSepolia, mainnet, base],

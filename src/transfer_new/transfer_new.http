@@ -5,6 +5,6 @@ x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3Z
 {
     "token": "ETH",
     "recipientAddress": "0x15EB1380e150385ac4fe769Fee9c75D1CDe93Fec",
-    "amount": 0.01, 
-    "isTestnet": false
+    "amount": 0.001, 
+    "isTestnet": true
 }
