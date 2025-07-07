@@ -1,4 +1,6 @@
 import { arbitrumSepolia, base, baseSepolia, mainnet } from 'viem/chains';
+import 'dotenv/config';
+import { JsonRpcProvider } from 'ethers';
 
 export const GLOBAL_PREFIX = 'api';
 export const ENV_FILE_PATH = '.env';
@@ -18,7 +20,7 @@ export const ETH_USDT: string = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
 /*------------------------------ MINIMUM VALUES ------------------------------*/
 export const USDT_MINIMUM = 10;
 export const USDC_MINIMUM = 10;
-export const ETH_MINIMUM = 0.001;
+export const ETH_MINIMUM = 0.0005;
 
 /*------------------------------ TOKEN TICKERS ------------------------------*/
 export const ETH = 'eth';
@@ -32,6 +34,7 @@ export const BACKEND_WALLET_2 = '0xBcA05C6b8091C07D03fd4E2BB094228C85FC552b';
 
 /*------------------------------ MINIMUM VALUE ------------------------------*/
 export const minimumAmounts: Record<string, number> = {
+  [WETH]: ETH_MINIMUM,
   [ETH]: ETH_MINIMUM,
   [USDT]: USDT_MINIMUM,
   [USDC]: USDC_MINIMUM,
@@ -102,4 +105,10 @@ export enum SUPPORTED_TOKENS {
   ETH = 'WETH',
 }
 
-// Supported Chains
+// PROVIDERS
+export const PROVIDERS = {
+  MAINNET: new JsonRpcProvider(process.env.MAINNET_RPC_URL || ''),
+  BASE: new JsonRpcProvider(process.env.BASE_RPC_URL || ''),
+  SEPOLIA: new JsonRpcProvider(process.env.SEPOLIA_RPC_URL || ''),
+  BASE_TESTNET: new JsonRpcProvider(process.env.BASE_TEST_RPC_URL || ''),
+};

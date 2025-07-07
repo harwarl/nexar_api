@@ -19,4 +19,5 @@ export interface Transfer {
   expectedReceiveAmount: number;
   walletA: string;
   walletB: string;
+  isTestnet?: boolean;
 }

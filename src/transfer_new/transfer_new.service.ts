@@ -2,18 +2,21 @@ import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { Model } from 'mongoose';
 import {
   erc20Abi,
+  formatEther,
   formatUnits,
   isAddress,
   parseEther,
   parseUnits,
   Transaction,
 } from 'viem';
+import axios from 'axios';
 import { AcrossService } from './across.service';
 import * as crypto from 'crypto';
 import { Contract, HDNodeWallet, JsonRpcProvider, Wallet } from 'ethers';
 import {
   ETH,
   minimumAmounts,
+  PROVIDERS,
   STATUS,
   SUPPORTED_TOKENS,
   TOKEN_ADDRESS,
@@ -29,11 +32,13 @@ import {
 } from 'viem/chains';
 import { Transfer } from './types/transfer.interface';
 import { ConfigService } from '@nestjs/config';
+import { StartTransferTransactionDto } from 'src/transfer/dto/StartTransferProcess.dto';
+import { ERC20_Interface } from 'utils/ethers';
 
 @Injectable()
 export class TransferNewService {
-  //   private apiKey = process.env.ES_API_KEY;
-  //   private currentBlock = 1000000;
+  private apiKey = process.env.ES_API_KEY;
+  private currentBlock = 1000000;
   private BACKEND_WALLET: `0x${string}`;
   private platformFee: number = 1; // this is one percent
   private IV_LENGTH: number = 12; // random bytes length
@@ -176,6 +181,7 @@ export class TransferNewService {
       senderAddress: '',
       walletA: walletAEncrypted,
       walletB: walletBEncrypted,
+      isTestnet,
     });
 
     let txnObj = newTransferTxn.toObject();
@@ -188,9 +194,225 @@ export class TransferNewService {
     return {
       success: true,
       transaction: txnObj,
+      isTestnet,
       message:
         'Tranaction created successfully. Transfer funds to the payin address and wait for confirmation. Pooling to the Payin Wallet closes in 15 minutes after transaction has been started.',
     };
+  }
+
+  // Starting the transfer process while getting the Transaction ID
+  async startTransfer(startTransferDto: StartTransferTransactionDto) {
+    // Get the transaction from The ID and throw an error if not found
+    const { transactionId } = startTransferDto;
+
+    const transactionExists = await this.transferTxnModel.findOne({
+      txId: transactionId,
+    });
+
+    if (
+      !transactionExists ||
+      !transactionExists.walletA ||
+      !transactionExists.walletB
+    ) {
+      throw new BadRequestException('Transaction not found');
+    }
+
+    if (transactionExists.status !== STATUS.NEW) {
+      throw new BadRequestException(
+        'Transaction has already been started or completed',
+      );
+    }
+
+    // Get the current block number : TODO: uncomment this later
+    // this.currentBlock = transactionExists.isTestnet
+    //   ? await PROVIDERS.SEPOLIA.getBlockNumber()
+    //   : await PROVIDERS.MAINNET.getBlockNumber();
+
+    try {
+      // TODO: start listener in here
+      const paymentResult = await this.startListener(transactionExists);
+
+      console.log({ paymentResult });
+
+      // End pooling after amount has been received
+    } catch (error) {}
+  }
+
+  /*------------------------------ Listeners ------------------------------*/
+  private async startListener(transfer: Transfer) {
+    const { txId, payinAddress, toCurrency, fromCurrency } = transfer;
+
+    if (toCurrency !== fromCurrency) {
+      throw new BadRequestException(
+        'Transfer currencies do not match. Cannot start listener.',
+      );
+    }
+
+    // Create a unique Key for the listener
+    const listenerKey = `${txId}-${payinAddress}`;
+
+    // Check if a listener already exists for this transaction
+    if (this.activeListeners.has(listenerKey)) {
+      throw new BadRequestException(
+        'Listener already exists for this transaction',
+      );
+    }
+
+    console.log(`👥 [TX:${listenerKey}] Starting listener for user`);
+
+    return new Promise(async (resolve, reject) => {
+      const checkInterval = 15_000; // 15 seconds
+
+      const interval = setInterval(async () => {
+        try {
+          const result = await this.checkTransactions(transfer);
+          if (result) {
+            cleanup();
+            resolve(result);
+          }
+        } catch (error) {
+          cleanup();
+          reject(error);
+        }
+      }, checkInterval);
+
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error(`[TX:${txId}] Timeout after 10 minutes`));
+      }, 600000);
+
+      const cleanup = () => {
+        clearInterval(interval);
+        clearTimeout(timeout);
+        this.activeListeners.delete(listenerKey);
+      };
+
+      this.activeListeners.set(listenerKey, { cleanup });
+    });
+  }
+
+  // Check tthe transactions for the wallet involved
+  private async checkTransactions(transfer: Transfer): Promise<{
+    txHash: `0x${string}`;
+    senderAddress: `0x${string}`;
+    amountReceived: number;
+    error: any;
+  } | null> {
+    const { txId, fromCurrency, expectedSendAmount, isTestnet } = transfer;
+
+    console.log(`[TX:${txId}] Checking transactions for ${fromCurrency}`);
+    // Determine if fromETH
+    const isETH =
+      fromCurrency.toLowerCase() === ETH || fromCurrency.toLowerCase() === WETH;
+    const walletA = this.decryptObject(transfer.walletA);
+
+    try {
+      // Fetch both normal and token transfers in parallel
+      const [normalTxs, tokenTxs] = await Promise.all([
+        this.fetchTransactions(walletA.address, 'txlist', isTestnet),
+        isETH
+          ? []
+          : this.fetchTransactions(walletA.address, 'tokentx', isTestnet),
+      ]);
+
+      console.log({ normalTxs, tokenTxs });
+
+      // Combine and sort by timestamp (newest first)
+      const allTxs = [...normalTxs, ...tokenTxs].sort(
+        (a, b) => parseInt(b.timeStamp) - parseInt(a.timeStamp),
+      );
+
+      for (const tx of allTxs) {
+        try {
+          const amount = isETH
+            ? parseFloat(formatEther(tx.value))
+            : await this.decodeTokenAmount(tx, tx.isTestnet);
+
+          console.log({ amount });
+          console.log(fromCurrency.toLowerCase());
+          console.log(minimumAmounts[fromCurrency.toLowerCase()]);
+
+          // check if amount is not less than the minimum amount
+          if (amount > minimumAmounts[fromCurrency.toLowerCase()]) {
+            return {
+              txHash: tx.hash,
+              senderAddress: tx.from,
+              amountReceived: amount,
+              error: null,
+            };
+          }
+        } catch (error) {
+          console.warn(`[TX:${txId}] Error processing tx ${tx.hash}:`, error);
+        }
+      }
+    } catch (error) {
+      console.error(`[TX:${txId}] Etherscan error:`, error);
+      throw new Error(`Transaction check failed: ${error.message}`);
+    }
+  }
+
+  private async fetchTransactions(
+    address: `0x${string}`,
+    action: 'txlist' | 'tokentx',
+    isTestnet: boolean = false,
+  ) {
+    const baseUrl = isTestnet
+      ? this.configService.get<string>('SEPOLIA_API_URL')
+      : this.configService.get<string>('ETH_API_URL');
+
+    let url = `${baseUrl}?module=account&action=${action}${action === 'tokentx' ? `contractaddress=${address}` : ''}&address=${address}&startblock=${this.currentBlock - 20}&endblock=99999999&sort=desc&page=1&offset=10&apikey=${this.apiKey}`;
+
+    // TODO: Handle the case where the action is 'tokentx' and we need to filter by contract address
+    // if (action === 'tokentx') {
+    //   url += `&contractaddress=${walletAddress}`;  ?? This can be alot of address
+    // }
+
+    console.log('[DEBUG] Final Etherscan URL:', url);
+
+    const response = await axios.get(url, { timeout: 5000 });
+
+    if (response.data.status !== '1') {
+      return [];
+    }
+
+    return response.data.result.map((tx: any) => ({
+      ...tx,
+      blockNumber: parseInt(tx.blockNumber),
+    }));
+  }
+
+  private async decodeTokenAmount(
+    tx: any,
+    isTestnet: boolean,
+  ): Promise<number> {
+    try {
+      if (tx.tokenDecimal) {
+        return parseFloat(formatUnits(tx.value, tx.tokenDecimal));
+      }
+
+      const txn = isTestnet
+        ? await PROVIDERS.SEPOLIA.getTransaction(tx.hash)
+        : await PROVIDERS.MAINNET.getTransaction(tx.hash);
+
+      if (!txn || !txn.data) {
+        throw new Error('Transaction data not found');
+      }
+
+      const parsedTx = ERC20_Interface.parseTransaction({
+        value: txn.value,
+        data: txn.data,
+      });
+
+      if (!parsedTx) {
+        throw new Error('Failed to parse transfer data');
+      }
+
+      if (!parsedTx || parsedTx.name !== 'transfer') return 0;
+      return parseFloat(formatEther(parsedTx.args[1]));
+    } catch (error) {
+      console.error('⚠️ Failed to decode ERC-20 transaction:', error);
+      throw error;
+    }
   }
 
   /*------------------------------ Private Functions ------------------------------*/
@@ -317,9 +539,6 @@ export class TransferNewService {
   }
 
   private getKey() {
-    console.log({ ecncrytion_salt: this.ENCRYPTION_SALT });
-    console.log({ encryption_key: this.ENCRYPTION_KEY });
-
     return crypto.pbkdf2Sync(
       this.ENCRYPTION_KEY,
       this.ENCRYPTION_SALT,

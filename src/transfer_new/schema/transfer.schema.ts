@@ -22,6 +22,10 @@ export const TransferSchema = new mongoose.Schema(
     expectedReceiveAmount: Number,
     walletA: String,
     walletB: String,
+    isTestnet: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
