@@ -58,6 +58,9 @@ export enum STATUS {
   RECEIVER_ROUTING = 'receiver_routing',
   ORDER_COMPLETED = 'order_completed',
   FAILED = 'failed',
+  CROSS_CHAIN_CLAIM = 'cross_chain_claim',
+  REFUNDING = 'refunding',
+  REFUNDED = 'refunded',
 }
 
 /*------------------------------ FAILURE_REASONS ------------------------------*/

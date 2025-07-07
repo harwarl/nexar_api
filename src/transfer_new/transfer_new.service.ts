@@ -178,13 +178,18 @@ export class TransferNewService {
       walletB: walletBEncrypted,
     });
 
-    delete newTransferTxn.walletA;
-    delete newTransferTxn.walletB;
+    let txnObj = newTransferTxn.toObject();
+
+    // Remove sensitive data before returning
+    delete txnObj.walletA;
+    delete txnObj.walletB;
 
     // TODO: get a transaction ID
     return {
       success: true,
-      transaction: newTransferTxn,
+      transaction: txnObj,
+      message:
+        'Tranaction created successfully. Transfer funds to the payin address and wait for confirmation. Pooling to the Payin Wallet closes in 15 minutes after transaction has been started.',
     };
   }
 
