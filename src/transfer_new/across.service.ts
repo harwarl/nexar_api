@@ -20,6 +20,7 @@ import {
 import { privateKeyToAccount } from 'viem/accounts';
 import { base, mainnet, arbitrumSepolia, baseSepolia } from 'viem/chains';
 import { createWalletClient } from 'viem';
+import { tokenBridgeNamedPayloads } from '@wormhole-foundation/sdk-connect';
 
 @Injectable()
 export class AcrossService {
@@ -137,7 +138,8 @@ export class AcrossService {
     fromETH: boolean = true, // Means sending chain is ETH
     isNative: boolean = true, // If sending WETH
   ) {
-    console.log({ fromETH });
+    token = token.toUpperCase() as SUPPORTED_TOKENS;
+    console.log({ fromETH, token });
     let inputToken: `0x${string}`;
     let outputToken: `0x${string}`;
 

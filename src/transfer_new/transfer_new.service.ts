@@ -27,6 +27,7 @@ import {
   arbitrumSepolia,
   base,
   baseSepolia,
+  form,
   mainnet,
   sepolia,
 } from 'viem/chains';
@@ -34,6 +35,8 @@ import { Transfer } from './types/transfer.interface';
 import { ConfigService } from '@nestjs/config';
 import { StartTransferTransactionDto } from 'src/transfer/dto/StartTransferProcess.dto';
 import { ERC20_Interface } from 'utils/ethers';
+import { send } from 'process';
+import { format } from 'path';
 
 @Injectable()
 export class TransferNewService {
@@ -54,6 +57,9 @@ export class TransferNewService {
   ) {
     this.ENCRYPTION_KEY = configService.get<string>('ENCRYPTION_KEY');
     this.ENCRYPTION_SALT = configService.get<string>('SALT');
+    this.BACKEND_WALLET = configService.get<string>(
+      'BACKEND_WALLET',
+    ) as `0x${string}`;
   }
 
   // Create transaction and send transaction details to the USER
@@ -85,7 +91,9 @@ export class TransferNewService {
 
     // Dynamically determine decimals for parseUnits
     console.log({ token, ETH, WETH, isIn: token.toLowerCase() in [ETH, WETH] });
-    const decimals = [ETH, WETH].includes(token.toLowerCase()) ? 18 : 6;
+    const decimals = [ETH, WETH].includes(token.toLowerCase())
+      ? 18
+      : await this.getTokenDecimals();
 
     console.log({ decimals });
     // Format amount for quote
@@ -154,10 +162,14 @@ export class TransferNewService {
     console.log({ walletA, walletB });
 
     // TODO: Hash the wallets involved in this transaction
-    const walletAEncrypted = this.encryptObject(walletA);
-    const walletBEncrypted = this.encryptObject(walletB);
-
-    console.log({ walletAEncrypted, walletBEncrypted });
+    const walletAEncrypted = this.encryptObject({
+      ...walletA,
+      privateKey: walletA.privateKey,
+    });
+    const walletBEncrypted = this.encryptObject({
+      ...walletB,
+      privateKey: walletB.privateKey,
+    });
 
     // TODO: Save the entire Thing to the database.
     const newTransferTxn = await this.transferTxnModel.create({
@@ -217,11 +229,14 @@ export class TransferNewService {
       throw new BadRequestException('Transaction not found');
     }
 
-    if (transactionExists.status !== STATUS.NEW) {
-      throw new BadRequestException(
-        'Transaction has already been started or completed',
-      );
-    }
+    // if (transactionExists.status !== STATUS.NEW) {
+    //   throw new BadRequestException(
+    //     'Transaction has already been started or completed',
+    //   );
+    // }
+
+    // Decrypt the Wallets involved in the Transaction
+    const walletA = await this.decryptObject(transactionExists.walletA);
 
     // Get the current block number : TODO: uncomment this later
     // this.currentBlock = transactionExists.isTestnet
@@ -229,18 +244,65 @@ export class TransferNewService {
     //   : await PROVIDERS.MAINNET.getBlockNumber();
 
     try {
-      // TODO: start listener in here
+      // Update the transaction status to WAITING
+      await this.transferTxnModel.updateOne(
+        { txId: transactionId },
+        { $set: { status: STATUS.WAITING } },
+      );
+
+      // Start Listener for the transaction
       const paymentResult = await this.startListener(transactionExists);
 
-      console.log({ paymentResult });
+      // STEP 1: Remove the 1% fee from the amount sent
+      const fee_removal_hash = await this.remove_fee(
+        transactionExists.fromCurrency.toLowerCase() as SUPPORTED_TOKENS,
+        paymentResult.amountReceived as number,
+        walletA,
+        transactionExists.isTestnet ? PROVIDERS.SEPOLIA : PROVIDERS.MAINNET,
+        transactionExists.isTestnet ? 'SEPOLIA' : 'ETH',
+      );
 
-      // End pooling after amount has been received
-    } catch (error) {}
+      console.log('Fee Removal Hash: ', fee_removal_hash);
+
+      // TODO: Update the db with the payin Hash
+
+      // await this.remove_fee(SUPPORTED_TOKENS.ETH, paymentResult.amountReceived);
+    } catch (error) {
+      console.log('Transfer Failed: ', error);
+
+      // Do some form of revert here or update the transaction as failed
+      // await this.transferTxnModel.updateOne(
+      //   { txId: transactionId },
+      //   {
+      //     $set: {
+      //       status: STATUS.FAILED,
+      //       payinHash: '',
+      //       payoutHash: '',
+      //       firstBridgeHash: '',
+      //       secondBridgeHash: '',
+      //       internalTransferHash: '',
+      //       transferToReceiverHash: '',
+      //     },
+      //   },
+      // );
+
+      throw new BadRequestException(
+        error.message ||
+          'Transfer failed due to an error. Please try again later.',
+      );
+    }
   }
 
   /*------------------------------ Listeners ------------------------------*/
-  private async startListener(transfer: Transfer) {
+  private async startListener(transfer: Transfer): Promise<{
+    txHash: `0x${string}`;
+    senderAddress: `0x${string}`;
+    amountReceived: number;
+    error: any;
+  } | null> {
     const { txId, payinAddress, toCurrency, fromCurrency } = transfer;
+
+    console.log({ payinAddress });
 
     if (toCurrency !== fromCurrency) {
       throw new BadRequestException(
@@ -298,30 +360,34 @@ export class TransferNewService {
     amountReceived: number;
     error: any;
   } | null> {
-    const { txId, fromCurrency, expectedSendAmount, isTestnet } = transfer;
+    const { txId, fromCurrency, isTestnet } = transfer;
 
     console.log(`[TX:${txId}] Checking transactions for ${fromCurrency}`);
     // Determine if fromETH
     const isETH =
       fromCurrency.toLowerCase() === ETH || fromCurrency.toLowerCase() === WETH;
-    const walletA = this.decryptObject(transfer.walletA);
+    const walletA = await this.decryptObject(transfer.walletA);
 
     try {
       // Fetch both normal and token transfers in parallel
       const [normalTxs, tokenTxs] = await Promise.all([
-        this.fetchTransactions(walletA.address, 'txlist', isTestnet),
+        this.fetchTransactions(
+          walletA.address as `0x${string}`,
+          'txlist',
+          isTestnet,
+        ),
         isETH
           ? []
-          : this.fetchTransactions(walletA.address, 'tokentx', isTestnet),
+          : this.fetchTransactions(
+              walletA.address as `0x${string}`,
+              'tokentx',
+              isTestnet,
+            ),
       ]);
-
-      console.log({ normalTxs, tokenTxs });
-
       // Combine and sort by timestamp (newest first)
       const allTxs = [...normalTxs, ...tokenTxs].sort(
         (a, b) => parseInt(b.timeStamp) - parseInt(a.timeStamp),
       );
-
       for (const tx of allTxs) {
         try {
           const amount = isETH
@@ -330,8 +396,6 @@ export class TransferNewService {
 
           console.log({ amount });
           console.log(fromCurrency.toLowerCase());
-          console.log(minimumAmounts[fromCurrency.toLowerCase()]);
-
           // check if amount is not less than the minimum amount
           if (amount > minimumAmounts[fromCurrency.toLowerCase()]) {
             return {
@@ -432,61 +496,119 @@ export class TransferNewService {
     amount: number,
     fromWallet: HDNodeWallet,
     provider: JsonRpcProvider,
-    network: 'ETH' | 'BASE' = 'ETH',
+    network: 'ETH' | 'BASE' | 'SEPOLIA' | 'BASE_SEPOLIA' = 'ETH',
   ) {
     // CALCULATE 1%
-    // TODO: use the calculate fee function to get teh fee involved in here
-    const feeAmount = BigInt(Math.floor(amount * 0.01 * 1e18));
+    //format the amount to the correct decimals
+    console.log({ token, ETH, WETH, isIn: token.toLowerCase() in [ETH, WETH] });
+    const decimals = [ETH, WETH].includes(token.toLowerCase())
+      ? 18
+      : await this.getTokenDecimals();
 
-    let tokenAddress: `0x${string}` | undefined = undefined;
+    // Format amount for quote
+    const formattedAmount =
+      decimals === 18
+        ? parseEther(amount.toString())
+        : parseUnits(amount.toString(), decimals);
 
-    // If not ETH, get the token address for the network
-    if (token !== SUPPORTED_TOKENS.WETH && token !== SUPPORTED_TOKENS.USDC) {
-      throw new Error('Unsupported token for fee removal');
-    }
-    if (token !== SUPPORTED_TOKENS.WETH && token !== SUPPORTED_TOKENS.USDC) {
-      throw new Error('Unsupported token for fee removal');
-    }
-    if (token === SUPPORTED_TOKENS.WETH || token === SUPPORTED_TOKENS.USDC) {
-      tokenAddress = TOKEN_ADDRESS[token][network] as `0x${string}`;
-    }
+    const { amountAfterFee, fee } = this.calculateplatformFee(formattedAmount);
 
+    console.log({ message: 'Na here', token, compa: SUPPORTED_TOKENS.ETH });
     // For ETH, tokenAddress remains undefined
     return await this.transfer(
-      feeAmount,
+      fee,
       this.BACKEND_WALLET,
       fromWallet,
       provider,
-      token === SUPPORTED_TOKENS.WETH || token === SUPPORTED_TOKENS.USDC
-        ? tokenAddress
+      token.toUpperCase() !== SUPPORTED_TOKENS.ETH
+        ? (TOKEN_ADDRESS[token.toUpperCase()][network] as `0x{string}`)
         : undefined,
     );
   }
+
+  // Get token decimals
+  private async getTokenDecimals(
+    tokenAddress?: `0x${string}`,
+    provider?: JsonRpcProvider,
+  ): Promise<number> {
+    // const erc20Contract = new Contract(tokenAddress, erc20Abi, provider);
+    // const decimals = await erc20Contract.decimals();
+    return 6;
+  }
+
   // The universal Transfer function for both ETH AND WETH AND other ERC20 tokens
   private async transfer(
-    amount: bigint,
+    amount: bigint, // Wei
     recipientAddress: `0x${string}`,
     wallet: HDNodeWallet,
     provider: JsonRpcProvider,
     tokenAddress?: `0x${string}`,
-  ): Promise<`0x{string}`> {
-    const signer = wallet.connect(provider);
+  ): Promise<`0x${string}`> {
+    console.log({ tokenAddress });
+    const signer = new Wallet(wallet.privateKey, provider);
+
+    let estimatedGas: bigint;
+    let gasPrice: bigint;
+    let gasFee: bigint;
+    // Calculate the gas
+
+    let sendAmount = amount;
     if (!tokenAddress) {
+      estimatedGas = await signer.estimateGas({
+        to: recipientAddress,
+        value: !tokenAddress ? amount : 0n, // only set value if not transferring a token
+        data: tokenAddress ? '0x' : undefined, // If tokenAddress is provided, no data is needed
+      });
+
+      // get the gas Price
+      gasPrice = (await provider.getFeeData()).gasPrice;
+
+      // Get the gas fee
+      gasFee = estimatedGas * gasPrice; // in wei
+
+      if (amount < gasFee) {
+        throw new BadRequestException(
+          'Amount is less than the gas fee required for the transaction',
+        );
+      }
+
+      sendAmount = amount - gasFee; // Adjust the amount to send after deducting gas fee
       // Transfer Native ETH
       const tx = await signer.sendTransaction({
         to: recipientAddress,
-        value: amount,
+        value: sendAmount,
+        gasLimit: estimatedGas,
+        gasPrice: gasPrice,
       });
       await tx.wait();
       return tx.hash as `0x{string}`;
     } else {
-      // ERC 20 transfer (WETH) or any ERC20
+      // Use ERC20 to estimate gas
       const erc20Contract = new Contract(tokenAddress, erc20Abi, signer);
-      const tx = await erc20Contract.transfer(recipientAddress, amount);
+      estimatedGas = await erc20Contract.transfer.estimateGas(
+        recipientAddress,
+        amount,
+      );
+      // ERC 20 transfer (WETH) or any ERC20
+      const tx = await erc20Contract.transfer(recipientAddress, amount, {
+        gasLimit: estimatedGas,
+        gasPrice: gasPrice,
+      });
       await tx.wait();
       return tx.hash as `0x{string}`;
     }
   }
+
+  // private async getWallet(pk: `0x${string}`): Promise<HDNodeWallet> {
+  //   const wallet = new Wallet(pk);
+  //   if (!wallet || !wallet.privateKey) {
+  //     throw new BadRequestException(
+  //       'Could not get wallets needed for transfer, try again',
+  //     );
+  //   }
+
+  //   return HDNodeWallet.fromSeed(wallet.privateKey);
+  // }
 
   // Generate Wallets Need for the private transactions
   private async generateWallets(): Promise<{
