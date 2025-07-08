@@ -1,4 +1,10 @@
-import { arbitrumSepolia, base, baseSepolia, mainnet } from 'viem/chains';
+import {
+  arbitrumSepolia,
+  base,
+  baseSepolia,
+  mainnet,
+  sepolia,
+} from 'viem/chains';
 import 'dotenv/config';
 import { JsonRpcProvider } from 'ethers';
 
@@ -76,7 +82,7 @@ export enum REASON {
 export const TRANSFER_SIGNATURE = '0xa9059cbb';
 
 // Supported chains
-export const SUPPORTED_CHAINS = [arbitrumSepolia, baseSepolia, mainnet, base];
+export const SUPPORTED_CHAINS = [sepolia, arbitrumSepolia, mainnet, base];
 
 // Token Address of supported tokens
 export const TOKEN_ADDRESS: Record<
@@ -87,7 +93,7 @@ export const TOKEN_ADDRESS: Record<
     ETH: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // Ethereum Mainnet WETH
     BASE: '0x4200000000000000000000000000000000000006', // Base Mainnet WETH
     SEPOLIA: '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14', // Sepolia testnet WETH
-    BASE_SEPOLIA: '0x4200000000000000000000000000000000000006', // Ethereum Mainnet
+    BASE_SEPOLIA: '0x980B62Da83eFf3D4576C647993b0c1D7faf17c73', // Arbitrum TEstnet Mainnet
   },
   USDC: {
     ETH: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // Ethereum Mainnet USDC
@@ -112,3 +118,6 @@ export const PROVIDERS = {
   SEPOLIA: new JsonRpcProvider(process.env.SEPOLIA_RPC_URL || ''),
   BASE_TESTNET: new JsonRpcProvider(process.env.BASE_TEST_RPC_URL || ''),
 };
+
+// Buffer gas to add to the transaction amount
+export const BUFFER_GAS = '0.0008';

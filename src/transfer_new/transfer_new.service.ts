@@ -14,6 +14,7 @@ import { AcrossService } from './across.service';
 import * as crypto from 'crypto';
 import { Contract, HDNodeWallet, JsonRpcProvider, Wallet } from 'ethers';
 import {
+  BUFFER_GAS,
   ETH,
   minimumAmounts,
   PROVIDERS,
@@ -23,14 +24,7 @@ import {
   WETH,
 } from 'utils/constants';
 import { CreateTransferTransactionDto } from './dto/CreateTransferTxn.dto';
-import {
-  arbitrumSepolia,
-  base,
-  baseSepolia,
-  form,
-  mainnet,
-  sepolia,
-} from 'viem/chains';
+import { arbitrumSepolia, base, mainnet, sepolia } from 'viem/chains';
 import { Transfer } from './types/transfer.interface';
 import { ConfigService } from '@nestjs/config';
 import { StartTransferTransactionDto } from 'src/transfer/dto/StartTransferProcess.dto';
@@ -104,7 +98,7 @@ export class TransferNewService {
 
     // Determine chain IDs
     const sourceChainId = isTestnet ? sepolia.id : mainnet.id;
-    const destinationChainId = isTestnet ? baseSepolia.id : base.id;
+    const destinationChainId = isTestnet ? arbitrumSepolia.id : base.id;
 
     console.log({ sourceChainId, destinationChainId, formattedAmount });
 
@@ -125,6 +119,7 @@ export class TransferNewService {
       sourceChainId,
       destinationChainId,
       supportedToken,
+      recipientAddress,
       isTestnet,
       fromETH,
       fromETH,
@@ -152,6 +147,7 @@ export class TransferNewService {
 
     // Calculate the platform
     const { fee, amountAfterFee } = this.calculateplatformFee(formattedAmount);
+
     console.log({ fee, amountAfterFee });
 
     if (!fee || !amountAfterFee)
@@ -159,7 +155,6 @@ export class TransferNewService {
 
     // generate two wallets for the user.
     const { walletA, walletB } = await this.generateWallets();
-    console.log({ walletA, walletB });
 
     // TODO: Hash the wallets involved in this transaction
     const walletAEncrypted = this.encryptObject({
@@ -170,13 +165,25 @@ export class TransferNewService {
       ...walletB,
       privateKey: walletB.privateKey,
     });
+    console.log('In here na');
+    console.log(
+      Number(
+        formatUnits(expectedSendAmount, decimals) + parseEther(BUFFER_GAS),
+      ),
+    );
 
+    console.log(
+      formatUnits(expectedSendAmount, decimals),
+      parseEther(BUFFER_GAS),
+    );
     // TODO: Save the entire Thing to the database.
     const newTransferTxn = await this.transferTxnModel.create({
       txId: this.generateRandomTxId(),
       payinAddress: walletA.address,
       payoutAddress: walletB.address,
-      expectedSendAmount: Number(formatUnits(expectedSendAmount, decimals)),
+      expectedSendAmount: Number(
+        formatUnits(expectedSendAmount, decimals) + parseEther(BUFFER_GAS),
+      ),
       expectedReceiveAmount: Number(formatUnits(amountAfterFee, decimals)),
       recipientAddress: recipientAddress,
       status: STATUS.NEW,
@@ -229,14 +236,19 @@ export class TransferNewService {
       throw new BadRequestException('Transaction not found');
     }
 
-    // if (transactionExists.status !== STATUS.NEW) {
-    //   throw new BadRequestException(
-    //     'Transaction has already been started or completed',
-    //   );
-    // }
+    if (transactionExists.status !== STATUS.NEW) {
+      throw new BadRequestException(
+        'Transaction has already been started or completed',
+      );
+    }
 
     // Decrypt the Wallets involved in the Transaction
-    const walletA = await this.decryptObject(transactionExists.walletA);
+    const [walletA, walletB] = [
+      await this.decryptObject(transactionExists.walletA),
+      await this.decryptObject(transactionExists.walletB),
+    ];
+
+    // console.log({ walletA: walletA.privateKey });
 
     // Get the current block number : TODO: uncomment this later
     // this.currentBlock = transactionExists.isTestnet
@@ -253,18 +265,106 @@ export class TransferNewService {
       // Start Listener for the transaction
       const paymentResult = await this.startListener(transactionExists);
 
-      // STEP 1: Remove the 1% fee from the amount sent
-      const fee_removal_hash = await this.remove_fee(
+      if (paymentResult.error) {
+        await this.transferTxnModel.updateOne(
+          { txId: transactionId },
+          {
+            $set: {
+              status: STATUS.FAILED,
+              updateAt: new Date(),
+            },
+          },
+        );
+
+        throw new BadRequestException(paymentResult.error.message);
+      }
+
+      // const { txHash: fee_removal_hash, amountAfterFee } =
+      //   await this.remove_fee(
+      //     transactionExists.fromCurrency.toLowerCase() as SUPPORTED_TOKENS,
+      //     paymentResult.amountReceived as number,
+      //     walletA,
+      //     transactionExists.isTestnet ? PROVIDERS.SEPOLIA : PROVIDERS.MAINNET,
+      //     transactionExists.isTestnet ? 'SEPOLIA' : 'ETH',
+      //   );
+
+      // console.log('Fee Removal Hash: ', fee_removal_hash);
+
+      // STEP 1: Calculate and Subtract the 1% fee from the amount sent
+      const decimals = [ETH, WETH].includes(
+        transactionExists.fromCurrency.toLowerCase(),
+      )
+        ? 18
+        : await this.getTokenDecimals();
+
+      // Format amount for quote
+      const formattedAmount =
+        decimals === 18
+          ? parseEther(paymentResult.amountReceived.toString())
+          : parseUnits(paymentResult.amountReceived.toString(), decimals);
+
+      // calculate platform fee
+      const { amountAfterFee, fee } =
+        this.calculateplatformFee(formattedAmount);
+
+      if (amountAfterFee < fee) {
+        throw new BadRequestException('Amount after fee is less than the fee');
+      }
+
+      // Update the DB with the payment hash and the sender
+      await this.transferTxnModel.updateOne(
+        { txId: transactionId },
+        {
+          $set: {
+            status: STATUS.ORDER_CREATED,
+            payinHash: paymentResult.txHash,
+            senderAddress: paymentResult.senderAddress,
+            amountSent: formatEther(amountAfterFee),
+          },
+        },
+      );
+
+      //TODO: Make this ERC20 compatible
+      const amountToSend = transactionExists.isTestnet
+        ? await PROVIDERS.SEPOLIA.getBalance(walletA.address as `0x${string}`)
+        : await PROVIDERS.MAINNET.getBalance(walletA.address as `0x${string}`);
+
+      console.log('Amount to send: ', amountToSend);
+
+      // STEP 2: Bridge to base And Update the Status
+      const firstBridgeHash = await this.acrossService.startBridge(
+        walletA,
+        transactionExists.isTestnet ? sepolia : mainnet,
+        transactionExists.isTestnet ? arbitrumSepolia : base,
+        WETH.toUpperCase() as SUPPORTED_TOKENS,
+        BigInt(amountToSend),
+        walletB.address as `0x${string}`,
+        true, // Bridging from ETH
+        transactionExists.isTestnet, // check if is testnet
+      );
+
+      console.log('First Bridge hash: ', firstBridgeHash);
+
+      // Get balance left in wallet A after the first bridge
+      const amountLeft = transactionExists.isTestnet
+        ? await PROVIDERS.SEPOLIA.getBalance(walletA.address as `0x${string}`)
+        : await PROVIDERS.MAINNET.getBalance(walletA.address as `0x${string}`);
+
+      // SEND FEE TO PLATFORM WALLET
+      const { txHash: fee_removal_hash } = await this.remove_fee(
         transactionExists.fromCurrency.toLowerCase() as SUPPORTED_TOKENS,
-        paymentResult.amountReceived as number,
+        amountLeft,
         walletA,
         transactionExists.isTestnet ? PROVIDERS.SEPOLIA : PROVIDERS.MAINNET,
         transactionExists.isTestnet ? 'SEPOLIA' : 'ETH',
       );
 
       console.log('Fee Removal Hash: ', fee_removal_hash);
+      // STEP 3: Transfer to wallet B And Update the Status
 
-      // TODO: Update the db with the payin Hash
+      // STEP 4: Bridge Back to ETH and update the status
+
+      // STEP 5: Transfer to Receiver and update the status
 
       // await this.remove_fee(SUPPORTED_TOKENS.ETH, paymentResult.amountReceived);
     } catch (error) {
@@ -301,8 +401,6 @@ export class TransferNewService {
     error: any;
   } | null> {
     const { txId, payinAddress, toCurrency, fromCurrency } = transfer;
-
-    console.log({ payinAddress });
 
     if (toCurrency !== fromCurrency) {
       throw new BadRequestException(
@@ -493,37 +591,65 @@ export class TransferNewService {
   // This removes and sends the platform 1% fee to the backend wallet, sends ETH or any other ERC 20 related token to the backend wallet
   private async remove_fee(
     token: SUPPORTED_TOKENS,
-    amount: number,
+    amount: bigint, // wallet balance
     fromWallet: HDNodeWallet,
     provider: JsonRpcProvider,
     network: 'ETH' | 'BASE' | 'SEPOLIA' | 'BASE_SEPOLIA' = 'ETH',
-  ) {
+  ): Promise<{ txHash: `0x${string}` }> {
+    //; amountAfterFee: number }> {
     // CALCULATE 1%
-    //format the amount to the correct decimals
-    console.log({ token, ETH, WETH, isIn: token.toLowerCase() in [ETH, WETH] });
-    const decimals = [ETH, WETH].includes(token.toLowerCase())
-      ? 18
-      : await this.getTokenDecimals();
+    // //format the amount to the correct decimals
+    // console.log({ token, ETH, WETH, isIn: token.toLowerCase() in [ETH, WETH] });
+    // const decimals = [ETH, WETH].includes(token.toLowerCase())
+    //   ? 18
+    //   : await this.getTokenDecimals();
 
-    // Format amount for quote
-    const formattedAmount =
-      decimals === 18
-        ? parseEther(amount.toString())
-        : parseUnits(amount.toString(), decimals);
+    // // Format amount for quote
+    // const formattedAmount =
+    //   decimals === 18
+    //     ? parseEther(amount.toString())
+    //     : parseUnits(amount.toString(), decimals);
 
-    const { amountAfterFee, fee } = this.calculateplatformFee(formattedAmount);
+    // const { amountAfterFee, fee } = this.calculateplatformFee(formattedAmount);
 
-    console.log({ message: 'Na here', token, compa: SUPPORTED_TOKENS.ETH });
-    // For ETH, tokenAddress remains undefined
-    return await this.transfer(
-      fee,
+    // console.log({ message: 'Na here', token, compa: SUPPORTED_TOKENS.ETH });
+
+    // Get the gas fee needed for the transaction
+    const { estimatedGas, gasPrice } = await this.getGasFee(
+      amount,
       this.BACKEND_WALLET,
-      fromWallet,
       provider,
+      fromWallet,
       token.toUpperCase() !== SUPPORTED_TOKENS.ETH
         ? (TOKEN_ADDRESS[token.toUpperCase()][network] as `0x{string}`)
         : undefined,
     );
+
+    const gasFee: bigint = estimatedGas * gasPrice;
+
+    if (amount < gasFee) {
+      throw new BadRequestException(
+        'Amount is less than the gas fee required for the transaction',
+      );
+    }
+
+    // For ETH, tokenAddress remains undefined
+    const txHash = await this.transfer(
+      amount, // The fee
+      this.BACKEND_WALLET,
+      fromWallet,
+      provider,
+      estimatedGas,
+      gasPrice,
+      token.toUpperCase() !== SUPPORTED_TOKENS.ETH
+        ? (TOKEN_ADDRESS[token.toUpperCase()][network] as `0x{string}`)
+        : undefined,
+    );
+
+    return {
+      txHash: txHash as `0x${string}`,
+      // amountAfterFee: Number(formatUnits(amountAfterFee, decimals)),
+    };
   }
 
   // Get token decimals
@@ -531,52 +657,37 @@ export class TransferNewService {
     tokenAddress?: `0x${string}`,
     provider?: JsonRpcProvider,
   ): Promise<number> {
-    // const erc20Contract = new Contract(tokenAddress, erc20Abi, provider);
-    // const decimals = await erc20Contract.decimals();
-    return 6;
+    let decimals: number = 6;
+    if (tokenAddress && provider) {
+      const erc20Contract = new Contract(tokenAddress, erc20Abi, provider);
+      decimals = await erc20Contract.decimals();
+    }
+    return decimals;
   }
 
   // The universal Transfer function for both ETH AND WETH AND other ERC20 tokens
   private async transfer(
-    amount: bigint, // Wei
+    amount: bigint,
     recipientAddress: `0x${string}`,
     wallet: HDNodeWallet,
     provider: JsonRpcProvider,
+    estimatedGas: bigint,
+    gasPrice: bigint,
     tokenAddress?: `0x${string}`,
   ): Promise<`0x${string}`> {
-    console.log({ tokenAddress });
+    // Validate recipient address
+    if (!isAddress(recipientAddress)) {
+      throw new BadRequestException('Invalid recipient address');
+    }
+
+    // get wallet signer
     const signer = new Wallet(wallet.privateKey, provider);
 
-    let estimatedGas: bigint;
-    let gasPrice: bigint;
-    let gasFee: bigint;
-    // Calculate the gas
-
-    let sendAmount = amount;
     if (!tokenAddress) {
-      estimatedGas = await signer.estimateGas({
-        to: recipientAddress,
-        value: !tokenAddress ? amount : 0n, // only set value if not transferring a token
-        data: tokenAddress ? '0x' : undefined, // If tokenAddress is provided, no data is needed
-      });
-
-      // get the gas Price
-      gasPrice = (await provider.getFeeData()).gasPrice;
-
-      // Get the gas fee
-      gasFee = estimatedGas * gasPrice; // in wei
-
-      if (amount < gasFee) {
-        throw new BadRequestException(
-          'Amount is less than the gas fee required for the transaction',
-        );
-      }
-
-      sendAmount = amount - gasFee; // Adjust the amount to send after deducting gas fee
       // Transfer Native ETH
       const tx = await signer.sendTransaction({
         to: recipientAddress,
-        value: sendAmount,
+        value: amount,
         gasLimit: estimatedGas,
         gasPrice: gasPrice,
       });
@@ -585,10 +696,7 @@ export class TransferNewService {
     } else {
       // Use ERC20 to estimate gas
       const erc20Contract = new Contract(tokenAddress, erc20Abi, signer);
-      estimatedGas = await erc20Contract.transfer.estimateGas(
-        recipientAddress,
-        amount,
-      );
+
       // ERC 20 transfer (WETH) or any ERC20
       const tx = await erc20Contract.transfer(recipientAddress, amount, {
         gasLimit: estimatedGas,
@@ -599,16 +707,36 @@ export class TransferNewService {
     }
   }
 
-  // private async getWallet(pk: `0x${string}`): Promise<HDNodeWallet> {
-  //   const wallet = new Wallet(pk);
-  //   if (!wallet || !wallet.privateKey) {
-  //     throw new BadRequestException(
-  //       'Could not get wallets needed for transfer, try again',
-  //     );
-  //   }
+  // Get the gas fee needed for the transaction
+  private async getGasFee(
+    amount: bigint,
+    recipientAddress: `0x${string}`,
+    provider: JsonRpcProvider,
+    wallet: HDNodeWallet,
+    tokenAddress?: `0x${string}`,
+  ) {
+    let estimatedGas: bigint;
+    let gasPrice: bigint = (await provider.getFeeData()).gasPrice;
+    let signer = new Wallet(wallet.privateKey, provider);
 
-  //   return HDNodeWallet.fromSeed(wallet.privateKey);
-  // }
+    // for natives
+    if (!tokenAddress) {
+      estimatedGas = await signer.estimateGas({
+        to: recipientAddress,
+        value: !tokenAddress ? amount : 0n, // only set value if not transferring a token
+        data: tokenAddress ? '0x' : undefined,
+      });
+    } else {
+      // for ERC20 tokens, using ERC20 to estimate gas
+      const erc20Contract = new Contract(tokenAddress, erc20Abi, signer);
+      estimatedGas = await erc20Contract.transfer.estimateGas(
+        recipientAddress,
+        amount,
+      );
+    }
+
+    return { estimatedGas, gasPrice }; // in wei
+  }
 
   // Generate Wallets Need for the private transactions
   private async generateWallets(): Promise<{

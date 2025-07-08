@@ -6,9 +6,15 @@ import {
 } from '@across-protocol/app-sdk';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { HDNodeWallet } from 'ethers';
+import { HDNodeWallet, JsonRpcProvider } from 'ethers';
 import { Model } from 'mongoose';
-import { SUPPORTED_TOKENS, TOKEN_ADDRESS } from 'utils/constants';
+import {
+  BUFFER_GAS,
+  PROVIDERS,
+  SUPPORTED_CHAINS,
+  SUPPORTED_TOKENS,
+  TOKEN_ADDRESS,
+} from 'utils/constants';
 import {
   Account,
   Chain,
@@ -18,7 +24,13 @@ import {
   WalletClient,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { base, mainnet, arbitrumSepolia, baseSepolia } from 'viem/chains';
+import {
+  base,
+  mainnet,
+  arbitrumSepolia,
+  baseSepolia,
+  sepolia,
+} from 'viem/chains';
 import { createWalletClient } from 'viem';
 import { tokenBridgeNamedPayloads } from '@wormhole-foundation/sdk-connect';
 
@@ -41,6 +53,7 @@ export class AcrossService {
     destinationChain: Chain,
     token: SUPPORTED_TOKENS,
     amount: bigint,
+    receivingWalletAddress: `0x${string}`,
     fromETH: boolean = true,
     isTestnet: boolean = false,
   ) {
@@ -49,25 +62,68 @@ export class AcrossService {
       sourceChain.id,
       destinationChain.id,
       token,
+      receivingWalletAddress,
       fromETH,
       token === SUPPORTED_TOKENS.WETH ? true : false,
     );
 
+    console.log('Quote:', quote);
+
     if (!quote) return;
 
     // Create the Wallet Client
-    // const isFromEth = sourceChain === arbitrumSepolia || mainnet ? true : false;
     const walletClient = this.createUserWalletClient(
       wallet.privateKey as `0x${string}`,
       sourceChain,
       fromETH,
       isTestnet,
     );
+
+    // Get Provider
+    let provider: JsonRpcProvider;
+
+    if (isTestnet) {
+      provider = fromETH ? PROVIDERS.SEPOLIA : PROVIDERS.BASE_TESTNET;
+    } else {
+      provider = fromETH ? PROVIDERS.MAINNET : PROVIDERS.BASE; // Base Mainnet
+    }
+
+    if (!provider) {
+      throw new BadRequestException('No provider found');
+    }
+
+    // Estimate the Gas Fees
+    const gasEstimate = await provider.estimateGas({
+      from: walletClient.account?.address,
+      to: quote.deposit.spokePoolAddress,
+      // data,
+      value: quote.deposit.isNative ? quote.deposit.inputAmount : 0n,
+    });
+
+    const gasPrice = (await provider.getFeeData()).gasPrice || 0n;
+
+    // Calculate the gas cost
+    const gasCost = gasEstimate * gasPrice;
+
+    // Clean up buffer gas
+    const bufferWei = parseEther((Number(BUFFER_GAS) / 2).toString());
+
+    // Generate a new quote with the adjusted input amount
+    const new_quote = await this.getQuote(
+      amount - gasCost - bufferWei,
+      sourceChain.id,
+      destinationChain.id,
+      token,
+      receivingWalletAddress,
+      fromETH,
+      token === SUPPORTED_TOKENS.WETH ? true : false,
+    );
+
     // Execute Bridge
     const res = await this.executeQuote(
       this.acrossClient,
       walletClient,
-      quote.deposit,
+      new_quote.deposit,
     );
 
     return res;
@@ -134,6 +190,7 @@ export class AcrossService {
     sourceChainId: number,
     destinationChainId: number,
     token: SUPPORTED_TOKENS, // WETH or any supported tokens
+    receivingWalletAddress?: `0x${string}`, // Receiving wallet address
     isTestnet: boolean = false, // Check for testnet
     fromETH: boolean = true, // Means sending chain is ETH
     isNative: boolean = true, // If sending WETH
@@ -176,6 +233,7 @@ export class AcrossService {
       return await this.acrossClient.getQuote({
         route,
         inputAmount,
+        recipient: receivingWalletAddress,
       });
     } catch (error) {
       throw new BadRequestException(error.message);
@@ -226,7 +284,7 @@ export class AcrossService {
     let rpcUrl: string;
     if (isTestnet) {
       rpcUrl = fromETH
-        ? this.configService.get<string>('ARBITRUM_SEPOLIA_RPC_URL')
+        ? this.configService.get<string>('SEPOLIA_RPC_URL')
         : this.configService.get<string>('BASE_TEST_RPC_URL');
     } else {
       rpcUrl = fromETH
@@ -255,7 +313,7 @@ export class AcrossService {
   private createAcrossClient(isTestnet: boolean = true): AcrossClient {
     return createAcrossClient({
       integratorId: '0xdead',
-      chains: [arbitrumSepolia, baseSepolia, mainnet, base],
+      chains: SUPPORTED_CHAINS,
       useTestnet: isTestnet,
     });
   }

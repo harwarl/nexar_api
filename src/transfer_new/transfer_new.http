@@ -4,8 +4,8 @@ x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3Z
 
 {
     "token": "ETH",
-    "recipientAddress": "0x15EB1380e150385ac4fe769Fee9c75D1CDe93Fec",
-    "amount": 0.001, 
+    "recipientAddress": "0x925b098f9e5f2349926E1de19205b927237fbc46",
+    "amount": 0.0015, 
     "isTestnet": true
 }
 
@@ -16,5 +16,5 @@ Content-Type: application/json
 x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
 
 {
-    "transactionId": "bkkurve5iill5u"
+    "transactionId": "en7b39h900xiw8"
 }
