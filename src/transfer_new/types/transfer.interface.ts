@@ -1,5 +1,6 @@
 export interface Transfer {
   status: string;
+  step: number;
   payinHash: string;
   payoutHash: string;
   payinAddress: string;
@@ -17,6 +18,7 @@ export interface Transfer {
   identifier: string;
   expectedSendAmount: number;
   expectedReceiveAmount: number;
+  refundHash: string;
   walletA: string;
   walletB: string;
   isTestnet?: boolean;

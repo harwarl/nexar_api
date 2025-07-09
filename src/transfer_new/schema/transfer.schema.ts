@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 export const TransferSchema = new mongoose.Schema(
   {
     status: String,
+    step: Number,
     payinHash: String,
     payoutHash: String,
     payinAddress: String,
@@ -20,6 +21,7 @@ export const TransferSchema = new mongoose.Schema(
     identifier: String,
     expectedSendAmount: Number,
     expectedReceiveAmount: Number,
+    refundHash: String,
     walletA: String,
     walletB: String,
     isTestnet: {

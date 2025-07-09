@@ -187,6 +187,7 @@ export class TransferNewService {
       expectedReceiveAmount: Number(formatUnits(amountAfterFee, decimals)),
       recipientAddress: recipientAddress,
       status: STATUS.NEW,
+      step: 0, // Marking the beginning and that nothing has
       payinHash: '',
       payoutHash: '',
       identifier: '',
@@ -312,6 +313,7 @@ export class TransferNewService {
             payinHash: paymentResult.txHash,
             senderAddress: paymentResult.senderAddress,
             amountSent: formatEther(amountAfterFee),
+            step: 1,
           },
         },
       );
@@ -364,6 +366,7 @@ export class TransferNewService {
             $set: {
               status: STATUS.CROSS_CHAIN_CLAIM,
               firstBridgeHash: firstBridgeHash.txHash,
+              step: 2, //Representing the first bridge
             },
           },
         );
@@ -406,6 +409,7 @@ export class TransferNewService {
         {
           $set: {
             status: STATUS.RECEIVER_ROUTING,
+            step: 3, // Representing that transfer has been done to the backend wallet.
           },
         },
       );
@@ -438,6 +442,7 @@ export class TransferNewService {
               status: STATUS.ORDER_COMPLETED,
               secondBridgeHash: secondBridgeHash.txHash,
               payoutHash: secondBridgeHash.txHash,
+              step: 4, // Representing that funds has been sent to the user
             },
           },
         );
@@ -467,6 +472,7 @@ export class TransferNewService {
         },
       );
 
+      await this.processRefund(transactionId);
       throw new BadRequestException(
         error.message ||
           'Transfer failed due to an error. Please try again later.',
@@ -474,6 +480,146 @@ export class TransferNewService {
     }
   }
 
+  // Processign Refund
+  private async processRefund(txId: string) {
+    // The current step of the project determines where to process the refund.
+    // For nor, Refund will be processed only if the first bridge fails
+
+    // get the transaction if it exists
+    const transactionExists = await this.transferTxnModel.findOne({ txId });
+
+    if (!transactionExists || transactionExists.status !== STATUS.FAILED) {
+      throw new BadRequestException(
+        'Transaction has already been completed or is in process',
+      );
+    }
+
+    const [walletA, walletB] = [
+      await this.decryptObject(transactionExists.walletA),
+      await this.decryptObject(transactionExists.walletB),
+    ];
+
+    // Get the provider to. use
+    const provider = transactionExists.isTestnet
+      ? PROVIDERS.SEPOLIA
+      : PROVIDERS.MAINNET;
+    const providerBase = transactionExists.isTestnet
+      ? PROVIDERS.ARB_TESTNET
+      : PROVIDERS.BASE;
+
+    // get network
+    const networkETH = transactionExists.isTestnet ? 'SEPOLIA' : 'ETH';
+    // const networkBASE = transactionExists.isTestnet ? 'ARB_TESTNET' : 'BASE';
+    // get token
+    const token = transactionExists.fromCurrency.toUpperCase();
+
+    // Processing refund based on the current step of the transaction
+    if (transactionExists.step === 1) {
+      // Transfer back to user from wallet A
+      await this.transferTxnModel.updateOne(
+        { txId },
+        {
+          $set: {
+            status: STATUS.REFUNDING,
+            refundedAt: new Date(),
+          },
+        },
+      );
+
+      // send balance back to the user from walletA
+      const amountToSend = await provider.getBalance(
+        walletA.address as `0x${string}`,
+      );
+
+      console.log('Amount to send: ', amountToSend);
+
+      // Start the send by first getting the gas price required for this transfer back
+      const { estimatedGas, gasPrice } = await this.getGasFee(
+        amountToSend,
+        this.BACKEND_WALLET,
+        transactionExists.isTestnet ? PROVIDERS.SEPOLIA : PROVIDERS.MAINNET,
+        walletA,
+        transactionExists.fromCurrency.toUpperCase() !== SUPPORTED_TOKENS.ETH
+          ? (TOKEN_ADDRESS[transactionExists.fromCurrency.toUpperCase()][
+              transactionExists.isTestnet ? 'SEPOLIA' : 'ETH'
+            ] as `0x{string}`)
+          : undefined,
+      );
+      const gasFee: bigint = estimatedGas * gasPrice;
+
+      // Throw an error if the gasFee is more than the amount to send
+      if (amountToSend < gasFee) {
+        throw new BadRequestException(
+          'Amount is less than the gas fee required for the transaction',
+        );
+      }
+
+      // transfer Back
+      const txHash = await this.transfer(
+        amountToSend - gasFee,
+        transactionExists.senderAddress as `0x${string}`,
+        walletA,
+        provider,
+        estimatedGas,
+        gasPrice,
+        token.toUpperCase() !== SUPPORTED_TOKENS.ETH
+          ? (TOKEN_ADDRESS[token.toUpperCase()][networkETH] as `0x{string}`)
+          : undefined,
+      );
+
+      // Update the DB with the refund Hash
+      await this.transferTxnModel.updateOne(
+        { txId },
+        {
+          $set: {
+            status: STATUS.REFUNDED,
+            refundedAt: new Date(),
+            refundHash: txHash,
+          },
+        },
+      );
+
+      return { success: true, message: 'Refund processed.', txHash };
+    } else if (transactionExists.step === 2) {
+      // use provider to get the balance of the second wallet
+      const amountToBridge = await providerBase.getBalance(
+        walletB.address as `0x${string}`,
+      );
+
+      const secondBridgeHash = await this.acrossService.startBridge(
+        walletB,
+        transactionExists.isTestnet ? arbitrumSepolia : base,
+        transactionExists.isTestnet ? sepolia : mainnet,
+        WETH.toUpperCase() as SUPPORTED_TOKENS,
+        amountToBridge,
+        transactionExists.senderAddress as `0x${string}`,
+        false,
+        transactionExists.isTestnet,
+      );
+
+      // Update the DB with the refund Hash
+      await this.transferTxnModel.updateOne(
+        { txId },
+        {
+          $set: {
+            status: STATUS.REFUNDED,
+            refundedAt: new Date(),
+            refundHash: secondBridgeHash.txHash,
+          },
+        },
+      );
+
+      return {
+        success: true,
+        message: 'Refund processed.',
+        txHash: secondBridgeHash.txHash,
+      };
+    } else {
+      throw new BadRequestException(
+        'Refund not allowed at this transaction step.',
+      );
+    }
+  }
   /*------------------------------ Listeners ------------------------------*/
   private async startListener(transfer: Transfer): Promise<{
     txHash: `0x${string}`;
@@ -680,23 +826,6 @@ export class TransferNewService {
     gasPrice: bigint,
   ): Promise<{ txHash: `0x${string}` }> {
     // Get the gas fee needed for the transaction
-    // const { estimatedGas, gasPrice } = await this.getGasFee(
-    //   amount,
-    //   this.BACKEND_WALLET,
-    //   provider,
-    //   fromWallet,
-    //   token.toUpperCase() !== SUPPORTED_TOKENS.ETH
-    //     ? (TOKEN_ADDRESS[token.toUpperCase()][network] as `0x{string}`)
-    //     : undefined,
-    // );
-
-    // const gasFee: bigint = estimatedGas * gasPrice;
-
-    // if (amount < gasFee) {
-    //   throw new BadRequestException(
-    //     'Amount is less than the gas fee required for the transaction',
-    //   );
-    // }
 
     // For ETH, tokenAddress remains undefined
     const txHash = await this.transfer(
