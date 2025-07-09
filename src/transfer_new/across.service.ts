@@ -63,6 +63,7 @@ export class AcrossService {
       destinationChain.id,
       token,
       receivingWalletAddress,
+      isTestnet,
       fromETH,
       token === SUPPORTED_TOKENS.WETH ? true : false,
     );
@@ -83,7 +84,7 @@ export class AcrossService {
     let provider: JsonRpcProvider;
 
     if (isTestnet) {
-      provider = fromETH ? PROVIDERS.SEPOLIA : PROVIDERS.BASE_TESTNET;
+      provider = fromETH ? PROVIDERS.SEPOLIA : PROVIDERS.ARB_TESTNET;
     } else {
       provider = fromETH ? PROVIDERS.MAINNET : PROVIDERS.BASE; // Base Mainnet
     }
@@ -115,18 +116,17 @@ export class AcrossService {
       destinationChain.id,
       token,
       receivingWalletAddress,
+      isTestnet,
       fromETH,
       token === SUPPORTED_TOKENS.WETH ? true : false,
     );
 
     // Execute Bridge
-    const res = await this.executeQuote(
+    return await this.executeQuote(
       this.acrossClient,
       walletClient,
       new_quote.deposit,
     );
-
-    return res;
   }
 
   // Execute the Quote
@@ -135,10 +135,14 @@ export class AcrossService {
     walletClient: WalletClient<Transport, Chain, Account>,
     quoteDeposit: Quote['deposit'],
   ) {
-    let result: { success: boolean; txHash?: string; error?: any } = {
+    let result: {
+      success: boolean;
+      txHash?: string;
+      error?: any;
+    } = {
       success: false,
     };
-    return await acrossClient.executeQuote({
+    const res = await acrossClient.executeQuote({
       walletClient,
       deposit: quoteDeposit,
       onProgress: async (progress) => {
@@ -155,8 +159,8 @@ export class AcrossService {
           );
         }
         if (progress.step === 'fill' && progress.status === 'txSuccess') {
-          const { txReceipt, actionSuccess } = progress;
-          if (actionSuccess) {
+          const { txReceipt } = progress;
+          if (txReceipt.transactionHash) {
             console.log(
               'Cross chain txs were successful:',
               txReceipt?.transactionHash,
@@ -195,10 +199,13 @@ export class AcrossService {
     fromETH: boolean = true, // Means sending chain is ETH
     isNative: boolean = true, // If sending WETH
   ) {
+    console.log({ isTestnet });
     token = token.toUpperCase() as SUPPORTED_TOKENS;
     console.log({ fromETH, token });
     let inputToken: `0x${string}`;
     let outputToken: `0x${string}`;
+
+    console.log({ isTestnet });
 
     if (isTestnet) {
       // ensure the across client is testnet based
@@ -221,6 +228,14 @@ export class AcrossService {
     if (inputToken.length == 0 || outputToken.length == 0)
       throw new BadRequestException('Token not supported');
 
+    console.log({
+      originChainId: sourceChainId,
+      destinationChainId,
+      inputToken,
+      outputToken,
+      isNative,
+    });
+
     const route: GetQuoteParams['route'] = {
       originChainId: sourceChainId,
       destinationChainId,
@@ -228,6 +243,8 @@ export class AcrossService {
       outputToken,
       isNative,
     };
+
+    console.log({ route, inputAmount, receivingWalletAddress });
 
     try {
       return await this.acrossClient.getQuote({

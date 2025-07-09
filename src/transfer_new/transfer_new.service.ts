@@ -236,7 +236,10 @@ export class TransferNewService {
       throw new BadRequestException('Transaction not found');
     }
 
-    if (transactionExists.status !== STATUS.NEW) {
+    if (
+      transactionExists.status !== STATUS.NEW &&
+      transactionExists.status !== STATUS.WAITING
+    ) {
       throw new BadRequestException(
         'Transaction has already been started or completed',
       );
@@ -248,12 +251,10 @@ export class TransferNewService {
       await this.decryptObject(transactionExists.walletB),
     ];
 
-    // console.log({ walletA: walletA.privateKey });
-
     // Get the current block number : TODO: uncomment this later
-    // this.currentBlock = transactionExists.isTestnet
-    //   ? await PROVIDERS.SEPOLIA.getBlockNumber()
-    //   : await PROVIDERS.MAINNET.getBlockNumber();
+    this.currentBlock = transactionExists.isTestnet
+      ? await PROVIDERS.SEPOLIA.getBlockNumber()
+      : await PROVIDERS.MAINNET.getBlockNumber();
 
     try {
       // Update the transaction status to WAITING
@@ -265,6 +266,7 @@ export class TransferNewService {
       // Start Listener for the transaction
       const paymentResult = await this.startListener(transactionExists);
 
+      // Update the DB if there is an ERROR
       if (paymentResult.error) {
         await this.transferTxnModel.updateOne(
           { txId: transactionId },
@@ -279,31 +281,21 @@ export class TransferNewService {
         throw new BadRequestException(paymentResult.error.message);
       }
 
-      // const { txHash: fee_removal_hash, amountAfterFee } =
-      //   await this.remove_fee(
-      //     transactionExists.fromCurrency.toLowerCase() as SUPPORTED_TOKENS,
-      //     paymentResult.amountReceived as number,
-      //     walletA,
-      //     transactionExists.isTestnet ? PROVIDERS.SEPOLIA : PROVIDERS.MAINNET,
-      //     transactionExists.isTestnet ? 'SEPOLIA' : 'ETH',
-      //   );
-
-      // console.log('Fee Removal Hash: ', fee_removal_hash);
-
       // STEP 1: Calculate and Subtract the 1% fee from the amount sent
+      // Get the decimal of the token
       const decimals = [ETH, WETH].includes(
         transactionExists.fromCurrency.toLowerCase(),
       )
         ? 18
         : await this.getTokenDecimals();
 
-      // Format amount for quote
+      // Format Amount for the quote
       const formattedAmount =
         decimals === 18
           ? parseEther(paymentResult.amountReceived.toString())
           : parseUnits(paymentResult.amountReceived.toString(), decimals);
 
-      // calculate platform fee
+      // Calculate the Platform fee
       const { amountAfterFee, fee } =
         this.calculateplatformFee(formattedAmount);
 
@@ -331,17 +323,63 @@ export class TransferNewService {
 
       console.log('Amount to send: ', amountToSend);
 
+      // Get the Gas Fee to make a transfer to the platform backend Wallet
+      const { estimatedGas, gasPrice } = await this.getGasFee(
+        amountToSend,
+        this.BACKEND_WALLET,
+        transactionExists.isTestnet ? PROVIDERS.SEPOLIA : PROVIDERS.MAINNET,
+        walletA,
+        transactionExists.fromCurrency.toUpperCase() !== SUPPORTED_TOKENS.ETH
+          ? (TOKEN_ADDRESS[transactionExists.fromCurrency.toUpperCase()][
+              transactionExists.isTestnet ? 'SEPOLIA' : 'ETH'
+            ] as `0x{string}`)
+          : undefined,
+      );
+      const gasFee: bigint = estimatedGas * gasPrice;
+
+      // Throw an error if the gasFee is more than the amount to send
+      if (amountToSend < gasFee) {
+        throw new BadRequestException(
+          'Amount is less than the gas fee required for the transaction',
+        );
+      }
+
       // STEP 2: Bridge to base And Update the Status
       const firstBridgeHash = await this.acrossService.startBridge(
         walletA,
         transactionExists.isTestnet ? sepolia : mainnet,
         transactionExists.isTestnet ? arbitrumSepolia : base,
         WETH.toUpperCase() as SUPPORTED_TOKENS,
-        BigInt(amountToSend),
+        BigInt(amountToSend) - gasFee,
         walletB.address as `0x${string}`,
         true, // Bridging from ETH
         transactionExists.isTestnet, // check if is testnet
       );
+
+      if (firstBridgeHash.txHash) {
+        // Update the DB
+        await this.transferTxnModel.updateOne(
+          { txId: transactionId },
+          {
+            $set: {
+              status: STATUS.CROSS_CHAIN_CLAIM,
+              firstBridgeHash: firstBridgeHash.txHash,
+            },
+          },
+        );
+      } else {
+        await this.transferTxnModel.updateOne(
+          { txId: transactionId },
+          {
+            $set: {
+              status: STATUS.FAILED,
+            },
+          },
+        );
+        throw new BadRequestException(
+          'Could not Complete Transfer, request refund',
+        );
+      }
 
       console.log('First Bridge hash: ', firstBridgeHash);
 
@@ -350,41 +388,84 @@ export class TransferNewService {
         ? await PROVIDERS.SEPOLIA.getBalance(walletA.address as `0x${string}`)
         : await PROVIDERS.MAINNET.getBalance(walletA.address as `0x${string}`);
 
-      // SEND FEE TO PLATFORM WALLET
+      // STEP 3: Send Fee in Wallet A to backend Wallet
       const { txHash: fee_removal_hash } = await this.remove_fee(
         transactionExists.fromCurrency.toLowerCase() as SUPPORTED_TOKENS,
-        amountLeft,
+        amountLeft - gasFee, // amout left in wallet minus gas
         walletA,
         transactionExists.isTestnet ? PROVIDERS.SEPOLIA : PROVIDERS.MAINNET,
         transactionExists.isTestnet ? 'SEPOLIA' : 'ETH',
+        estimatedGas,
+        gasPrice,
       );
 
-      console.log('Fee Removal Hash: ', fee_removal_hash);
-      // STEP 3: Transfer to wallet B And Update the Status
+      // STEP 4: Bridge Back to ETH and Transfer To Receiver
+      // udpate the db with the current step
+      await this.transferTxnModel.updateOne(
+        { txId: transactionId },
+        {
+          $set: {
+            status: STATUS.RECEIVER_ROUTING,
+          },
+        },
+      );
 
-      // STEP 4: Bridge Back to ETH and update the status
+      // use provider to get the balance of the second wallet
+      const amountToBridge = transactionExists.isTestnet
+        ? await PROVIDERS.ARB_TESTNET.getBalance(
+            walletB.address as `0x${string}`,
+          )
+        : await PROVIDERS.BASE.getBalance(walletB.address as `0x${string}`);
 
-      // STEP 5: Transfer to Receiver and update the status
+      // Start bridge back to ETH from wallet B
+      const secondBridgeHash = await this.acrossService.startBridge(
+        walletB,
+        transactionExists.isTestnet ? arbitrumSepolia : base,
+        transactionExists.isTestnet ? sepolia : mainnet,
+        WETH.toUpperCase() as SUPPORTED_TOKENS,
+        amountToBridge,
+        transactionExists.recipientAddress as `0x${string}`,
+        false,
+        transactionExists.isTestnet,
+      );
 
-      // await this.remove_fee(SUPPORTED_TOKENS.ETH, paymentResult.amountReceived);
+      if (secondBridgeHash.txHash) {
+        // Update the DB
+        await this.transferTxnModel.updateOne(
+          { txId: transactionId },
+          {
+            $set: {
+              status: STATUS.ORDER_COMPLETED,
+              secondBridgeHash: secondBridgeHash.txHash,
+              payoutHash: secondBridgeHash.txHash,
+            },
+          },
+        );
+      } else {
+        await this.transferTxnModel.updateOne(
+          { txId: transactionId },
+          {
+            $set: {
+              status: STATUS.FAILED,
+            },
+          },
+        );
+        throw new BadRequestException(
+          'Could not Complete Transfer to Receiver, request refund',
+        );
+      }
     } catch (error) {
       console.log('Transfer Failed: ', error);
 
       // Do some form of revert here or update the transaction as failed
-      // await this.transferTxnModel.updateOne(
-      //   { txId: transactionId },
-      //   {
-      //     $set: {
-      //       status: STATUS.FAILED,
-      //       payinHash: '',
-      //       payoutHash: '',
-      //       firstBridgeHash: '',
-      //       secondBridgeHash: '',
-      //       internalTransferHash: '',
-      //       transferToReceiverHash: '',
-      //     },
-      //   },
-      // );
+      await this.transferTxnModel.updateOne(
+        { txId: transactionId },
+        {
+          $set: {
+            status: STATUS.FAILED,
+          },
+        },
+      );
 
       throw new BadRequestException(
         error.message ||
@@ -595,43 +676,27 @@ export class TransferNewService {
     fromWallet: HDNodeWallet,
     provider: JsonRpcProvider,
     network: 'ETH' | 'BASE' | 'SEPOLIA' | 'BASE_SEPOLIA' = 'ETH',
+    estimatedGas: bigint,
+    gasPrice: bigint,
   ): Promise<{ txHash: `0x${string}` }> {
-    //; amountAfterFee: number }> {
-    // CALCULATE 1%
-    // //format the amount to the correct decimals
-    // console.log({ token, ETH, WETH, isIn: token.toLowerCase() in [ETH, WETH] });
-    // const decimals = [ETH, WETH].includes(token.toLowerCase())
-    //   ? 18
-    //   : await this.getTokenDecimals();
-
-    // // Format amount for quote
-    // const formattedAmount =
-    //   decimals === 18
-    //     ? parseEther(amount.toString())
-    //     : parseUnits(amount.toString(), decimals);
-
-    // const { amountAfterFee, fee } = this.calculateplatformFee(formattedAmount);
-
-    // console.log({ message: 'Na here', token, compa: SUPPORTED_TOKENS.ETH });
-
     // Get the gas fee needed for the transaction
-    const { estimatedGas, gasPrice } = await this.getGasFee(
-      amount,
-      this.BACKEND_WALLET,
-      provider,
-      fromWallet,
-      token.toUpperCase() !== SUPPORTED_TOKENS.ETH
-        ? (TOKEN_ADDRESS[token.toUpperCase()][network] as `0x{string}`)
-        : undefined,
-    );
+    // const { estimatedGas, gasPrice } = await this.getGasFee(
+    //   amount,
+    //   this.BACKEND_WALLET,
+    //   provider,
+    //   fromWallet,
+    //   token.toUpperCase() !== SUPPORTED_TOKENS.ETH
+    //     ? (TOKEN_ADDRESS[token.toUpperCase()][network] as `0x{string}`)
+    //     : undefined,
+    // );
 
-    const gasFee: bigint = estimatedGas * gasPrice;
+    // const gasFee: bigint = estimatedGas * gasPrice;
 
-    if (amount < gasFee) {
-      throw new BadRequestException(
-        'Amount is less than the gas fee required for the transaction',
-      );
-    }
+    // if (amount < gasFee) {
+    //   throw new BadRequestException(
+    //     'Amount is less than the gas fee required for the transaction',
+    //   );
+    // }
 
     // For ETH, tokenAddress remains undefined
     const txHash = await this.transfer(

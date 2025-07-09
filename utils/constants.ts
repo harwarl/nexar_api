@@ -116,7 +116,7 @@ export const PROVIDERS = {
   MAINNET: new JsonRpcProvider(process.env.MAINNET_RPC_URL || ''),
   BASE: new JsonRpcProvider(process.env.BASE_RPC_URL || ''),
   SEPOLIA: new JsonRpcProvider(process.env.SEPOLIA_RPC_URL || ''),
-  BASE_TESTNET: new JsonRpcProvider(process.env.BASE_TEST_RPC_URL || ''),
+  ARB_TESTNET: new JsonRpcProvider(process.env.BASE_TEST_RPC_URL || ''),
 };
 
 // Buffer gas to add to the transaction amount
