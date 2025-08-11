@@ -17,6 +17,7 @@ import { KeysModule } from './keys/keys.module';
 import { KeysService } from './keys/keys.service';
 import { ApiKeyMiddleware } from './middleware/key.middleware';
 import { TransferNewModule } from './transfer_new/transfer_new.module';
+import { Swapv2Module } from './swapv2/swapv2.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { TransferNewModule } from './transfer_new/transfer_new.module';
     TransferModule,
     KeysModule,
     TransferNewModule,
+    Swapv2Module,
   ],
   controllers: [AppController],
   providers: [

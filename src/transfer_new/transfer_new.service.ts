@@ -216,7 +216,7 @@ export class TransferNewService {
       transaction: txnObj,
       isTestnet,
       message:
-        'Tranaction created successfully. Transfer funds to the payin address and wait for confirmation. Pooling to the Payin Wallet closes in 15 minutes after transaction has been started.',
+        'Tranaction created successfully. Transfer funds to the payin address and wait for confirmation. Pooling to the Payin Wallet closes in 15 minutes after transaction has been started. if(error), the funds will be sent to the senders address with gas for transaction deducted',
     };
   }
 
@@ -586,6 +586,7 @@ export class TransferNewService {
         walletB.address as `0x${string}`,
       );
 
+      // Bridge back from the destination chain to the sender
       const secondBridgeHash = await this.acrossService.startBridge(
         walletB,
         transactionExists.isTestnet ? arbitrumSepolia : base,

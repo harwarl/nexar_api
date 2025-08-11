@@ -8,4 +8,4 @@ Content-Type: application/json
 ###
 GET http://localhost:4040/api/v1/keys/validate/
 Content-Type: application/json
-x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
+x-api-key: ZGRkZjllODUxMDQ3YTg2MDoxNzg2MzkxNTQ4MTA1OmJkOTRkZjI1ZjBjNTYxMjZlYTEyOWIwMGJjYmM2NDAzYzliMjYxZTdjYzViZTM1Y2MwNDhhZGZiYzRkNWM4Nzk
