@@ -4,6 +4,7 @@ import { Swapv2Controller } from './swapv2.controller';
 import { transactionProvidersV2 } from './schema/transaction.provider';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { DatabaseModule } from 'src/database/database.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       }),
       inject: [ConfigService],
     }),
+    DatabaseModule,
   ],
   controllers: [Swapv2Controller],
   providers: [Swapv2Service, ...transactionProvidersV2],

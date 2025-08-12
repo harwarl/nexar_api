@@ -10,13 +10,9 @@ import { SwapModule } from './swap/swap.module';
 import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
 import { ENV_FILE_PATH } from 'utils/constants';
-// import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-// import { APP_GUARD } from '@nestjs/core';
-import { TransferModule } from './transfer/transfer.module';
 import { KeysModule } from './keys/keys.module';
 import { KeysService } from './keys/keys.service';
 import { ApiKeyMiddleware } from './middleware/key.middleware';
-import { TransferNewModule } from './transfer_new/transfer_new.module';
 import { Swapv2Module } from './swapv2/swapv2.module';
 
 @Module({
@@ -34,9 +30,7 @@ import { Swapv2Module } from './swapv2/swapv2.module';
       envFilePath: ENV_FILE_PATH,
     }),
     SwapModule,
-    TransferModule,
     KeysModule,
-    TransferNewModule,
     Swapv2Module,
   ],
   controllers: [AppController],
