@@ -16,10 +16,18 @@ export interface AffiliateProviderConfig {
   };
 }
 
+export enum AFFILIATES {
+  EXOLIX = 'exolix',
+  FIXED_FLOAT = 'fixed_float',
+  SWAPUZ = 'swapuz',
+  SIMPLE_SWAP = 'simple_swap',
+  CHANGENOW = 'changenow',
+}
+
 export const AFFILIATE_PROVIDERS: AffiliateProviderConfig[] = [
   {
-    name: 'exolix',
-    baseUrl: '', // e.g., 'https://api.exolix.com/v1/'
+    name: AFFILIATES.EXOLIX,
+    baseUrl: process.env.EXOLIX_API_URL, // e.g., 'https://api.exolix.com/v1/'
     apiKey: process.env.EXOLIX_API_KEY || '',
     endpoints: {
       tokens: 'currencies',
@@ -30,8 +38,8 @@ export const AFFILIATE_PROVIDERS: AffiliateProviderConfig[] = [
     },
   },
   {
-    name: 'fixed_float',
-    baseUrl: '', // e.g., 'https://api.fixedfloat.com/v1/'
+    name: AFFILIATES.FIXED_FLOAT,
+    baseUrl: process.env.FIXED_FLOAT_API_URL, // e.g., 'https://api.fixedfloat.com/v1/'
     apiKey: process.env.FIXED_FLOAT_API_KEY || '',
     apiSecret: process.env.FIXED_FLOAT_API_SECRET || '',
     endpoints: {
@@ -42,8 +50,8 @@ export const AFFILIATE_PROVIDERS: AffiliateProviderConfig[] = [
     },
   },
   {
-    name: 'swapuz',
-    baseUrl: '', // e.g., 'https://api.swapuz.com/'
+    name: AFFILIATES.SWAPUZ,
+    baseUrl: process.env.SWAPUZ_API_URL, // e.g., 'https://api.swapuz.com/'
     apiKey: process.env.SWAPUZ_API_KEY || '',
     endpoints: {
       tokens: 'home/v1/coins',
@@ -53,8 +61,8 @@ export const AFFILIATE_PROVIDERS: AffiliateProviderConfig[] = [
     },
   },
   {
-    name: 'simple_swap',
-    baseUrl: '', // e.g., 'https://api.simpleswap.io/v1/'
+    name: AFFILIATES.SIMPLE_SWAP,
+    baseUrl: process.env.SIMPLE_SWAP_API_URL, // e.g., 'https://api.simpleswap.io/v1/'
     apiKey: process.env.SIMPLE_SWAP_API_KEY || '',
     endpoints: {
       tokens: 'pairs',
@@ -67,8 +75,8 @@ export const AFFILIATE_PROVIDERS: AffiliateProviderConfig[] = [
     },
   },
   {
-    name: 'changenow',
-    baseUrl: '', // e.g., 'https://api.changenow.io/v1/'
+    name: AFFILIATES.CHANGENOW,
+    baseUrl: process.env.CHANGENOW_URL, // e.g., 'https://api.changenow.io/v1/'
     apiKey: process.env.CHANGENOW_API_KEY || '',
     endpoints: {
       tokens: 'currencies?active=true&fixedRate=true',

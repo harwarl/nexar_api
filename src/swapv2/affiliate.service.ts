@@ -3,8 +3,13 @@ import { HttpException, Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Model } from 'mongoose';
 import { Transaction } from './types/transaction.interface';
-import { firstValueFrom } from 'rxjs';
-import { AFFILIATE_PROVIDERS, AffiliateProviderConfig } from './affiliateData';
+import { firstValueFrom, lastValueFrom } from 'rxjs';
+import {
+  AFFILIATE_PROVIDERS,
+  AffiliateProviderConfig,
+  AFFILIATES,
+} from './affiliateData';
+import crypto from 'crypto';
 
 @Injectable()
 export class AffiliateService {
@@ -42,7 +47,7 @@ export class AffiliateService {
    * Make API Get request to the specified provider's endpoint.
    */
   private async getFromProvider(
-    providerName: string,
+    providerName: AFFILIATES,
     endpointKey: keyof (typeof AFFILIATE_PROVIDERS)[number]['endpoints'],
     params?: Record<string, any>,
   ): Promise<any> {
@@ -61,19 +66,38 @@ export class AffiliateService {
 
     // Set up headers
     const headers: Record<string, string> = {};
-    if (provider.apiKey) {
-      headers['Authorization'] = `Bearer ${provider.apiKey}`;
-    }
-    if (provider.apiSecret) {
-      headers['x-api-key'] = provider.apiSecret;
+    // Set up Request Params
+    let requestParams = { ...params };
+
+    // Provider Specific Adjustments
+    switch (providerName) {
+      case AFFILIATES.EXOLIX:
+        headers['Authorization'] = `Bearer ${provider.apiKey}`;
+        break;
+
+      case AFFILIATES.FIXED_FLOAT:
+        headers['X-API-KEY'] = provider.apiKey; // TODO: A function to get the API Sign
+        headers['X-API-SIGN'] = provider.apiSecret!;
+        break;
+
+      case AFFILIATES.SWAPUZ:
+        headers['Api-Key'] = provider.apiKey;
+        break;
+
+      case AFFILIATES.SIMPLE_SWAP:
+      case AFFILIATES.CHANGENOW:
+        requestParams = { ...requestParams, api_key: provider.apiKey };
+        break;
+
+      default:
+        break;
     }
 
     // Make the HTTP Get request
-    const data = await firstValueFrom(
-      this.httpService.get(url, { params, headers }),
+    const data = await lastValueFrom(
+      this.httpService.get(url, { params: requestParams, headers }),
     );
 
-    console.log({ data });
     return data;
   }
 
@@ -100,20 +124,75 @@ export class AffiliateService {
 
     // Set up headers
     const headers: Record<string, string> = {};
+    // Set up Request Params
+    let requestParams = {};
 
-    if (provider.apiKey) {
-      body = { ...body, apiKey: provider.apiKey };
-    }
+    // Provider Specific Adjustments
+    switch (providerName) {
+      case AFFILIATES.EXOLIX:
+        headers['Authorization'] = `Bearer ${provider.apiKey}`;
+        break;
 
-    if (provider.apiSecret) {
-      headers['x-api-key'] = provider.apiSecret;
+      case AFFILIATES.FIXED_FLOAT:
+        headers['X-API-KEY'] = provider.apiKey; // TODO: A function to get the API Sign
+        headers['X-API-SIGN'] = this.getHmacSign({}, provider.apiSecret!);
+        break;
+
+      case AFFILIATES.SWAPUZ:
+        headers['Api-Key'] = provider.apiKey;
+        break;
+
+      case AFFILIATES.SIMPLE_SWAP:
+      case AFFILIATES.CHANGENOW:
+        requestParams = { ...requestParams, api_key: provider.apiKey };
+        break;
+
+      default:
+        break;
     }
 
     const { data } = await firstValueFrom(
-      this.httpService.post(url, body, { headers }),
+      this.httpService.post(url, body, { headers, params: requestParams }),
     );
 
     console.log({ data });
     return data;
+  }
+
+  /**
+   * Get tokens from the specified affiliate provider.
+   */
+  async getAllTokens() {
+    const results = await Promise.all(
+      AFFILIATE_PROVIDERS.map(async (provider) => {
+        try {
+          const data = await this.getFromProvider(
+            provider.name as AFFILIATES,
+            'tokens',
+          );
+
+          return { provider: provider.name, tokens: data.data || data };
+        } catch (error) {
+          console.error(`Error fetching tokens from ${provider.name}:`, error);
+          return {
+            provider: provider.name,
+            error: error.message || 'Failed to fetch tokens',
+          };
+        }
+      }),
+    );
+  }
+
+  // function to get the X-API-SIGN of fixed float
+  private getHmacSign(payload: any, secret: string) {
+    let message: string;
+
+    if (!payload || Object.keys(payload).length === 0) {
+      message = '';
+    } else {
+      message = JSON.stringify(payload);
+    }
+
+    return crypto.createHmac('sha256', secret).update(message).digest('hex');
   }
 }

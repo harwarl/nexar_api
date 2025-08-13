@@ -5,6 +5,7 @@ import { transactionProvidersV2 } from './schema/transaction.provider';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DatabaseModule } from 'src/database/database.module';
+import { AffiliateService } from './affiliate.service';
 
 @Module({
   imports: [
@@ -19,6 +20,6 @@ import { DatabaseModule } from 'src/database/database.module';
     DatabaseModule,
   ],
   controllers: [Swapv2Controller],
-  providers: [Swapv2Service, ...transactionProvidersV2],
+  providers: [Swapv2Service, ...transactionProvidersV2, AffiliateService],
 })
 export class Swapv2Module {}
