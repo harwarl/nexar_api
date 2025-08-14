@@ -18,7 +18,7 @@ export interface AffiliateProviderConfig {
 
 export enum AFFILIATES {
   EXOLIX = 'exolix',
-  FIXED_FLOAT = 'fixed_float',
+  // FIXED_FLOAT = 'fixed_float',
   SWAPUZ = 'swapuz',
   SIMPLE_SWAP = 'simple_swap',
   CHANGENOW = 'changenow',
@@ -37,18 +37,18 @@ export const AFFILIATE_PROVIDERS: AffiliateProviderConfig[] = [
       createExchangeTxn: 'transactions', // POST with body
     },
   },
-  {
-    name: AFFILIATES.FIXED_FLOAT,
-    baseUrl: process.env.FIXED_FLOAT_API_URL, // e.g., 'https://api.fixedfloat.com/v1/'
-    apiKey: process.env.FIXED_FLOAT_API_KEY || '',
-    apiSecret: process.env.FIXED_FLOAT_API_SECRET || '',
-    endpoints: {
-      tokens: 'ccies',
-      chains: 'currencies/networks',
-      getMinimumAmount: 'price', // query params: from, to, amount
-      createExchangeTxn: 'create', // POST with body
-    },
-  },
+  // {
+  //   name: AFFILIATES.FIXED_FLOAT,
+  //   baseUrl: process.env.FIXED_FLOAT_API_URL, // e.g., 'https://api.fixedfloat.com/v1/'
+  //   apiKey: process.env.FIXED_FLOAT_API_KEY || '',
+  //   apiSecret: process.env.FIXED_FLOAT_API_SECRET || '',
+  //   endpoints: {
+  //     tokens: 'ccies',
+  //     chains: 'currencies/networks',
+  //     getMinimumAmount: 'price', // query params: from, to, amount
+  //     createExchangeTxn: 'create', // POST with body
+  //   },
+  // },
   {
     name: AFFILIATES.SWAPUZ,
     baseUrl: process.env.SWAPUZ_API_URL, // e.g., 'https://api.swapuz.com/'
@@ -65,7 +65,7 @@ export const AFFILIATE_PROVIDERS: AffiliateProviderConfig[] = [
     baseUrl: process.env.SIMPLE_SWAP_API_URL, // e.g., 'https://api.simpleswap.io/v1/'
     apiKey: process.env.SIMPLE_SWAP_API_KEY || '',
     endpoints: {
-      tokens: 'pairs',
+      tokens: 'get_all_currencies',
       chains: 'currencies/networks',
       getTransactions: 'exchanges', // query: from, to, amount, fromNetwork, toNetwork
       getTransactionById: 'exchanges/', // expects public ID as param

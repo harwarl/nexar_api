@@ -13,6 +13,8 @@ export class Swapv2Service {
   async getTokens() {
     const tokens = await this.affiliateService.getAllTokens();
 
+    console.log({ tokens });
+
     return tokens;
   }
 }

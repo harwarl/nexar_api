@@ -54,6 +54,8 @@ export class AffiliateService {
     const provider = this.getProviderConfig(providerName);
     const endpoint = provider.endpoints[endpointKey];
 
+    console.log({ endpointKey });
+
     if (!endpoint) {
       throw new HttpException(
         `Endpoint ${endpointKey} not found for provider ${providerName}`,
@@ -75,13 +77,13 @@ export class AffiliateService {
         headers['Authorization'] = `Bearer ${provider.apiKey}`;
         break;
 
-      case AFFILIATES.FIXED_FLOAT:
-        headers['X-API-KEY'] = provider.apiKey; // TODO: A function to get the API Sign
-        headers['X-API-SIGN'] = provider.apiSecret!;
-        break;
+      // case AFFILIATES.FIXED_FLOAT:
+      //   headers['X-API-KEY'] = provider.apiKey; // TODO: A function to get the API Sign
+      //   headers['X-API-SIGN'] = provider.apiSecret!;
+      //   break;
 
       case AFFILIATES.SWAPUZ:
-        headers['Api-Key'] = provider.apiKey;
+        headers['Api-key'] = provider.apiKey;
         break;
 
       case AFFILIATES.SIMPLE_SWAP:
@@ -94,11 +96,11 @@ export class AffiliateService {
     }
 
     // Make the HTTP Get request
-    const data = await lastValueFrom(
+    const { data } = await lastValueFrom(
       this.httpService.get(url, { params: requestParams, headers }),
     );
 
-    return data;
+    return this.normalizeResults(providerName, data);
   }
 
   /**
@@ -133,17 +135,18 @@ export class AffiliateService {
         headers['Authorization'] = `Bearer ${provider.apiKey}`;
         break;
 
-      case AFFILIATES.FIXED_FLOAT:
-        headers['X-API-KEY'] = provider.apiKey; // TODO: A function to get the API Sign
-        headers['X-API-SIGN'] = this.getHmacSign({}, provider.apiSecret!);
-        break;
+      // case AFFILIATES.FIXED_FLOAT: // TODO: fix the call
+      //   headers['X-API-KEY'] = provider.apiKey; // TODO: A function to get the API Sign
+      //   headers['X-API-SIGN'] = this.getHmacSign({}, provider.apiSecret!);
+      //   break;
 
       case AFFILIATES.SWAPUZ:
-        headers['Api-Key'] = provider.apiKey;
+        headers['Api-key'] = provider.apiKey;
         break;
 
       case AFFILIATES.SIMPLE_SWAP:
       case AFFILIATES.CHANGENOW:
+        console.log({ provider, url });
         requestParams = { ...requestParams, api_key: provider.apiKey };
         break;
 
@@ -151,18 +154,35 @@ export class AffiliateService {
         break;
     }
 
-    const { data } = await firstValueFrom(
-      this.httpService.post(url, body, { headers, params: requestParams }),
-    );
+    // const { data } = await firstValueFrom(
+    //   this.httpService.post(url, body, { headers, params: requestParams }),
+    // );
 
-    console.log({ data });
-    return data;
+    // return this.normalizeResults(providerName, data);
+  }
+
+  /**
+   * Normalize get Response
+   */
+  private normalizeResults(providerName: string, rawData: any) {
+    switch (providerName) {
+      case AFFILIATES.SWAPUZ:
+        return rawData.result;
+
+      case AFFILIATES.SIMPLE_SWAP:
+      case AFFILIATES.EXOLIX:
+      case AFFILIATES.CHANGENOW:
+        return rawData;
+      default:
+        return rawData;
+    }
   }
 
   /**
    * Get tokens from the specified affiliate provider.
    */
-  async getAllTokens() {
+
+  async getAllTokens(): Promise<Tokens[]> {
     const results = await Promise.all(
       AFFILIATE_PROVIDERS.map(async (provider) => {
         try {
@@ -181,6 +201,8 @@ export class AffiliateService {
         }
       }),
     );
+
+    return results as Tokens[];
   }
 
   // function to get the X-API-SIGN of fixed float
