@@ -1,4 +1,10 @@
-GET http://localhost:4040/api/v2/swap/tokens
+GET http://localhost:4040/api/v2/swap/all_tokens
+Content-Type: application/json
+Accept: application/json
+x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
+
+###
+GET http://localhost:4040/api/v2/swap/tokens?type=all
 Content-Type: application/json
 Accept: application/json
 x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg

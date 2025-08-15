@@ -20,7 +20,6 @@ export class AffiliateService {
   // 3. Handling any other affiliate related logic
 
   constructor(
-    private readonly configService: ConfigService,
     private readonly httpService: HttpService,
     @Inject('TRANSACTION_MODEL_V2')
     private transactionModel: Model<Transaction>,
@@ -53,8 +52,6 @@ export class AffiliateService {
   ): Promise<any> {
     const provider = this.getProviderConfig(providerName);
     const endpoint = provider.endpoints[endpointKey];
-
-    console.log({ endpointKey });
 
     if (!endpoint) {
       throw new HttpException(
@@ -178,140 +175,215 @@ export class AffiliateService {
   }
 
   /**
-   * Get tokens from the specified affiliate provider.
+   * Fetches and returns a paginated list of all tokens supported by affiliate providers.
+   * @param page - The page number for pagination (default is 1).
+   * @returns An object containing the list of tokens and pagination info.
    */
+  async getAllTokens(page: number = 1): Promise<{}> {
+    return await this.getTokens(AFFILIATES.EXOLIX, page);
+  }
 
-  async getAllTokens(page: number = 1): Promise<any[]> {
-    const results = await Promise.all(
-      AFFILIATE_PROVIDERS.map(async (provider) => {
-        try {
-          const data = await this.getFromProvider(
-            provider.name as AFFILIATES,
-            'tokens',
-          );
+  /**
+   *
+   * @returns Popular Tokens
+   */
+  async getPopularTokens(): Promise<{}> {
+    const tokens = await this.getTokens(AFFILIATES.CHANGENOW);
+    const normalizedTokens = tokens
+      .map((token: any, index: number) => {
+        if (
+          token.name.includes('BNB') ||
+          token.name.includes('XRP') ||
+          token.ticker.includes('usdterc20') ||
+          token.ticker === 'sui' ||
+          token.ticker === 'shib' ||
+          token.ticker === 'floki' ||
+          token.ticker === 'bonk' ||
+          token.ticker === 'op' ||
+          token.ticker === 'wbtcmatic' ||
+          token.ticker === 'maticusdce' ||
+          token.ticker === 'usdtmatic' ||
+          token.ticker === 'opusdce' ||
+          token.ticker === 'usdtop' ||
+          token.ticker === 'ethop' ||
+          token.ticker === 'daiop' ||
+          token.ticker === 'matic' ||
+          token.ticker === 'doge' ||
+          token.ticker === 'pepe' ||
+          token.ticker === 'avax' ||
+          token.name === 'Bitcoin' ||
+          token.name === 'Solana' ||
+          token.name === 'Ethereum' ||
+          token.ticker === 'usdc' ||
+          token.ticker === 'usdcbsc' ||
+          token.ticker === 'usdctrc20' ||
+          token.ticker === 'ton' ||
+          token.ticker === 'xrp' ||
+          token.ticker === 'near' ||
+          token.ticker === 'ada' ||
+          token.ticker === 'trump'
+        ) {
+          return token;
+        }
+        return null;
+      })
 
-          // Normalize the tokens
-          const normalized = (data.data || data)
-            .flatMap((token: any) => {
-              return this.normalizeToken(token, provider.name);
-            })
-            .flat()
-            .filter(Boolean);
-
-          return normalized;
-          // return { provider: provider.name, tokens: data.data || data };
-        } catch (error) {
-          console.error(`Error fetching tokens from ${provider.name}:`, error);
+      .map((token: any) => {
+        if (token) {
           return {
-            provider: provider.name,
-            error: error.message || 'Failed to fetch tokens',
+            ticker: token.ticker,
+            name: token.name,
+            image: token.image,
           };
         }
-      }),
-    );
+        return null;
+      })
+      .filter((name: string | null) => name !== null);
 
-    const allNormalizedTokens = results.flat();
-
-    return this.mergeTokens(allNormalizedTokens) as any;
+    return normalizedTokens;
   }
 
-  private normalizeToken(token: any, source: string) {
-    switch (source) {
-      case 'ChangeNow':
-      case 'changenow':
-        return [
-          {
-            tokenName: token.name,
-            tokenSymbol: token.ticker,
-            network: null,
-            partners: ['ChangeNow'],
-            icon: token.image,
-          },
-        ];
-
-      case 'SimpleSwap':
-      case 'simple_swap':
-        return [
-          {
-            tokenName: token.name,
-            tokenSymbol: token.symbol,
-            network: token.network || null,
-            partners: ['SimpleSwap'],
-            icon: token.image,
-          },
-        ];
-
-      case 'SwapUz':
-      case 'swapuz':
-        return (token.network || []).map((net: any) => ({
-          tokenName: token.name,
-          tokenSymbol: token.shortName || token.shotName || token.symbol,
-          network: net.fullName || net.name,
-          partners: ['SwapUz'],
-          icon: token.image,
-        }));
-
-      case 'Exolix':
-      case 'exolix':
-        return (token.networks || []).map((net: any) => ({
-          tokenName: token.name,
-          tokenSymbol: token.code,
-          network: net.name || net.network,
-          partners: ['Exolix'],
-          icon: token.icon,
-        }));
-
-      default:
-        return [];
-    }
-  }
-
-  private mergeTokens(tokens: any[]) {
-    const iconPriority = ['SimpleSwap', 'Exolix', 'SwapUz', 'ChangeNow'];
-    const tokenMap = new Map();
-
-    tokens.forEach((t: any) => {
-      const key = `${t.tokenSymbol.toLowerCase()}-${(t.network || '').toLowerCase()}`;
-
-      if (!tokenMap.has(key)) {
-        tokenMap.set(key, { ...t });
-      } else {
-        const existing = tokenMap.get(key);
-        existing.partners = Array.from(
-          new Set([...existing.partners, ...t.partners]),
-        );
-
-        // Pick icon by priority
-        const currentBest = iconPriority.indexOf(
-          existing.partners.find((p: any) => iconPriority.includes(p)),
-        );
-        const newBest = iconPriority.indexOf(
-          t.partners.find((p: any) => iconPriority.includes(p)),
-        );
-
-        if (newBest !== -1 && (currentBest === -1 || newBest < currentBest)) {
-          existing.icon = t.icon;
-        }
-      }
+  private async getTokens(providerName: AFFILIATES, page: number = 1) {
+    return this.getFromProvider(providerName, 'tokens', {
+      page,
+      size: providerName === AFFILIATES.CHANGENOW ? null : 100,
     });
-
-    const mergedList = Array.from(tokenMap.values());
-
-    return {
-      popular: mergedList.filter((t) => t.partners.length > 1),
-      others: mergedList.filter((t) => t.partners.length === 1),
-    };
   }
+
+  // /**
+  //  * Get tokens from the specified affiliate provider.
+  //  */
+  // async getAllTokens(page: number = 1): Promise<any[]> {
+  //   const results = await Promise.all(
+  //     AFFILIATE_PROVIDERS.map(async (provider) => {
+  //       try {
+  //         const data = await this.getFromProvider(
+  //           provider.name as AFFILIATES,
+  //           'tokens',
+  //         );
+
+  //         // Normalize the tokens
+  //         const normalized = (data.data || data)
+  //           .flatMap((token: any) => {
+  //             return this.normalizeToken(token, provider.name);
+  //           })
+  //           .flat()
+  //           .filter(Boolean);
+
+  //         return normalized;
+  //         // return { provider: provider.name, tokens: data.data || data };
+  //       } catch (error) {
+  //         console.error(`Error fetching tokens from ${provider.name}:`, error);
+  //         return {
+  //           provider: provider.name,
+  //           error: error.message || 'Failed to fetch tokens',
+  //         };
+  //       }
+  //     }),
+  //   );
+
+  //   const allNormalizedTokens = results.flat();
+
+  //   return this.mergeTokens(allNormalizedTokens) as any;
+  // }
+
+  // private normalizeToken(token: any, source: string) {
+  //   switch (source) {
+  //     case 'ChangeNow':
+  //     case 'changenow':
+  //       return [
+  //         {
+  //           tokenName: token.name,
+  //           tokenSymbol: token.ticker,
+  //           network: null,
+  //           partners: ['ChangeNow'],
+  //           icon: token.image,
+  //         },
+  //       ];
+
+  //     case 'SimpleSwap':
+  //     case 'simple_swap':
+  //       return [
+  //         {
+  //           tokenName: token.name,
+  //           tokenSymbol: token.symbol,
+  //           network: token.network || null,
+  //           partners: ['SimpleSwap'],
+  //           icon: token.image,
+  //         },
+  //       ];
+
+  //     case 'SwapUz':
+  //     case 'swapuz':
+  //       return (token.network || []).map((net: any) => ({
+  //         tokenName: token.name,
+  //         tokenSymbol: token.shortName || token.shotName || token.symbol,
+  //         network: net.fullName || net.name,
+  //         partners: ['SwapUz'],
+  //         icon: token.image,
+  //       }));
+
+  //     case 'Exolix':
+  //     case 'exolix':
+  //       return (token.networks || []).map((net: any) => ({
+  //         tokenName: token.name,
+  //         tokenSymbol: token.code,
+  //         network: net.name || net.network,
+  //         partners: ['Exolix'],
+  //         icon: token.icon,
+  //       }));
+
+  //     default:
+  //       return [];
+  //   }
+  // }
+
+  // private mergeTokens(tokens: any[]) {
+  //   const iconPriority = ['SimpleSwap', 'Exolix', 'SwapUz', 'ChangeNow'];
+  //   const tokenMap = new Map();
+
+  //   tokens.forEach((t: any) => {
+  //     const key = `${t.tokenSymbol.toLowerCase()}-${(t.network || '').toLowerCase()}`;
+
+  //     if (!tokenMap.has(key)) {
+  //       tokenMap.set(key, { ...t });
+  //     } else {
+  //       const existing = tokenMap.get(key);
+  //       existing.partners = Array.from(
+  //         new Set([...existing.partners, ...t.partners]),
+  //       );
+
+  //       // Pick icon by priority
+  //       const currentBest = iconPriority.indexOf(
+  //         existing.partners.find((p: any) => iconPriority.includes(p)),
+  //       );
+  //       const newBest = iconPriority.indexOf(
+  //         t.partners.find((p: any) => iconPriority.includes(p)),
+  //       );
+
+  //       if (newBest !== -1 && (currentBest === -1 || newBest < currentBest)) {
+  //         existing.icon = t.icon;
+  //       }
+  //     }
+  //   });
+
+  //   const mergedList = Array.from(tokenMap.values());
+
+  //   return {
+  //     popular: mergedList.filter((t) => t.partners.length > 1),
+  //     others: mergedList.filter((t) => t.partners.length === 1),
+  //   };
+  // }
   // function to get the X-API-SIGN of fixed float
-  private getHmacSign(payload: any, secret: string) {
-    let message: string;
+  // private getHmacSign(payload: any, secret: string) {
+  //   let message: string;
 
-    if (!payload || Object.keys(payload).length === 0) {
-      message = '';
-    } else {
-      message = JSON.stringify(payload);
-    }
+  //   if (!payload || Object.keys(payload).length === 0) {
+  //     message = '';
+  //   } else {
+  //     message = JSON.stringify(payload);
+  //   }
 
-    return crypto.createHmac('sha256', secret).update(message).digest('hex');
-  }
+  //   return crypto.createHmac('sha256', secret).update(message).digest('hex');
+  // }
 }
