@@ -14,6 +14,9 @@ importers:
       '@nestjs/axios':
         specifier: ^3.1.3
         version: 3.1.3(@nestjs/common@10.4.18(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(axios@1.9.0)(rxjs@7.8.2)
+      '@nestjs/cache-manager':
+        specifier: ^3.0.1
+        version: 3.0.1(@nestjs/common@10.4.18(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.18)(cache-manager@7.1.1)(keyv@4.5.4)(rxjs@7.8.2)
       '@nestjs/common':
         specifier: ^10.0.0
         version: 10.4.18(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -711,6 +714,9 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
+  '@keyv/serialize@1.1.0':
+    resolution: {integrity: sha512-RlDgexML7Z63Q8BSaqhXdCYNBy/JQnqYIwxofUrNLGCblOMHp+xux2Q8nLMLlPpgHQPoU0Do8Z6btCpRBEqZ8g==}
+
   '@ljharb/through@2.3.14':
     resolution: {integrity: sha512-ajBvlKpWucBB17FuQYUShqpqy8GRgYEpJW0vWJbUu1CV9lWyrDCapy0lScU8T8Z6qn49sSwJB3+M+evYIdGg+A==}
     engines: {node: '>= 0.4'}
@@ -754,6 +760,15 @@ packages:
       '@nestjs/common': ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0
       axios: ^1.3.1
       rxjs: ^6.0.0 || ^7.0.0
+
+  '@nestjs/cache-manager@3.0.1':
+    resolution: {integrity: sha512-4UxTnR0fsmKL5YDalU2eLFVnL+OBebWUpX+hEduKGncrVKH4PPNoiRn1kXyOCjmzb0UvWgqubpssNouc8e0MCw==}
+    peerDependencies:
+      '@nestjs/common': ^9.0.0 || ^10.0.0 || ^11.0.0
+      '@nestjs/core': ^9.0.0 || ^10.0.0 || ^11.0.0
+      cache-manager: '>=6'
+      keyv: '>=5'
+      rxjs: ^7.8.1
 
   '@nestjs/cli@10.4.9':
     resolution: {integrity: sha512-s8qYd97bggqeK7Op3iD49X2MpFtW4LVNLAwXFkfbRxKME6IYT7X0muNTJ2+QfI8hpbNx9isWkrLWIp+g5FOhiA==}
@@ -1720,6 +1735,9 @@ packages:
   bytes@3.1.2:
     resolution: {integrity: sha512-/Nf7TyzTx6S3yRJObOAV7956r8cr2+Oj8AC5dt8wSP3BQAoeX58NoHyCU8P8zGkNXStjTSi6fzO6F0pBdcYbEg==}
     engines: {node: '>= 0.8'}
+
+  cache-manager@7.1.1:
+    resolution: {integrity: sha512-YZ5CXZ4cNOcVH5bokYE1Bo5NARvJhOkYAAwImGf7DozC0uyrT5Jqd5AWfPnSRavlHTPiHp2yZL3Q3ZEWBfkQvQ==}
 
   cacheable-lookup@5.0.4:
     resolution: {integrity: sha512-2/kNscPhpcxrOigMZzbiWF7dz8ilhb/nIHU3EyZiXWXpeq/au8qJ8VhdftMkty3n7Gj6HIGalQG8oiBNB3AJgA==}
@@ -2925,6 +2943,9 @@ packages:
 
   keyv@4.5.4:
     resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
+
+  keyv@5.5.0:
+    resolution: {integrity: sha512-QG7qR2tijh1ftOvClut4YKKg1iW6cx3GZsKoGyJPxHkGWK9oJhG9P3j5deP0QQOGDowBMVQFaP+Vm4NpGYvmIQ==}
 
   kleur@3.0.3:
     resolution: {integrity: sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w==}
@@ -5159,6 +5180,8 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
+  '@keyv/serialize@1.1.0': {}
+
   '@ljharb/through@2.3.14':
     dependencies:
       call-bind: 1.0.8
@@ -5236,6 +5259,14 @@ snapshots:
     dependencies:
       '@nestjs/common': 10.4.18(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       axios: 1.9.0
+      rxjs: 7.8.2
+
+  '@nestjs/cache-manager@3.0.1(@nestjs/common@10.4.18(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.18)(cache-manager@7.1.1)(keyv@4.5.4)(rxjs@7.8.2)':
+    dependencies:
+      '@nestjs/common': 10.4.18(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/core': 10.4.18(@nestjs/common@10.4.18(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@10.4.18)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      cache-manager: 7.1.1
+      keyv: 4.5.4
       rxjs: 7.8.2
 
   '@nestjs/cli@10.4.9':
@@ -6659,6 +6690,10 @@ snapshots:
       streamsearch: 1.1.0
 
   bytes@3.1.2: {}
+
+  cache-manager@7.1.1:
+    dependencies:
+      keyv: 5.5.0
 
   cacheable-lookup@5.0.4: {}
 
@@ -8161,6 +8196,10 @@ snapshots:
   keyv@4.5.4:
     dependencies:
       json-buffer: 3.0.1
+
+  keyv@5.5.0:
+    dependencies:
+      '@keyv/serialize': 1.1.0
 
   kleur@3.0.3: {}
 

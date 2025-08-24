@@ -1,6 +1,5 @@
 import { HttpService } from '@nestjs/axios';
 import { HttpException, Inject, Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Model } from 'mongoose';
 import { Transaction } from './types/transaction.interface';
 import { firstValueFrom, lastValueFrom } from 'rxjs';
@@ -9,7 +8,6 @@ import {
   AffiliateProviderConfig,
   AFFILIATES,
 } from './affiliateData';
-import crypto from 'crypto';
 
 @Injectable()
 export class AffiliateService {
@@ -74,11 +72,6 @@ export class AffiliateService {
         headers['Authorization'] = `Bearer ${provider.apiKey}`;
         break;
 
-      // case AFFILIATES.FIXED_FLOAT:
-      //   headers['X-API-KEY'] = provider.apiKey; // TODO: A function to get the API Sign
-      //   headers['X-API-SIGN'] = provider.apiSecret!;
-      //   break;
-
       case AFFILIATES.SWAPUZ:
         headers['Api-key'] = provider.apiKey;
         break;
@@ -132,11 +125,6 @@ export class AffiliateService {
         headers['Authorization'] = `Bearer ${provider.apiKey}`;
         break;
 
-      // case AFFILIATES.FIXED_FLOAT: // TODO: fix the call
-      //   headers['X-API-KEY'] = provider.apiKey; // TODO: A function to get the API Sign
-      //   headers['X-API-SIGN'] = this.getHmacSign({}, provider.apiSecret!);
-      //   break;
-
       case AFFILIATES.SWAPUZ:
         headers['Api-key'] = provider.apiKey;
         break;
@@ -150,11 +138,11 @@ export class AffiliateService {
         break;
     }
 
-    // const { data } = await firstValueFrom(
-    //   this.httpService.post(url, body, { headers, params: requestParams }),
-    // );
+    const { data } = await firstValueFrom(
+      this.httpService.post(url, body, { headers, params: requestParams }),
+    );
 
-    // return this.normalizeResults(providerName, data);
+    return this.normalizeResults(providerName, data);
   }
 
   /**
@@ -249,141 +237,4 @@ export class AffiliateService {
       size: providerName === AFFILIATES.CHANGENOW ? null : 100,
     });
   }
-
-  // /**
-  //  * Get tokens from the specified affiliate provider.
-  //  */
-  // async getAllTokens(page: number = 1): Promise<any[]> {
-  //   const results = await Promise.all(
-  //     AFFILIATE_PROVIDERS.map(async (provider) => {
-  //       try {
-  //         const data = await this.getFromProvider(
-  //           provider.name as AFFILIATES,
-  //           'tokens',
-  //         );
-
-  //         // Normalize the tokens
-  //         const normalized = (data.data || data)
-  //           .flatMap((token: any) => {
-  //             return this.normalizeToken(token, provider.name);
-  //           })
-  //           .flat()
-  //           .filter(Boolean);
-
-  //         return normalized;
-  //         // return { provider: provider.name, tokens: data.data || data };
-  //       } catch (error) {
-  //         console.error(`Error fetching tokens from ${provider.name}:`, error);
-  //         return {
-  //           provider: provider.name,
-  //           error: error.message || 'Failed to fetch tokens',
-  //         };
-  //       }
-  //     }),
-  //   );
-
-  //   const allNormalizedTokens = results.flat();
-
-  //   return this.mergeTokens(allNormalizedTokens) as any;
-  // }
-
-  // private normalizeToken(token: any, source: string) {
-  //   switch (source) {
-  //     case 'ChangeNow':
-  //     case 'changenow':
-  //       return [
-  //         {
-  //           tokenName: token.name,
-  //           tokenSymbol: token.ticker,
-  //           network: null,
-  //           partners: ['ChangeNow'],
-  //           icon: token.image,
-  //         },
-  //       ];
-
-  //     case 'SimpleSwap':
-  //     case 'simple_swap':
-  //       return [
-  //         {
-  //           tokenName: token.name,
-  //           tokenSymbol: token.symbol,
-  //           network: token.network || null,
-  //           partners: ['SimpleSwap'],
-  //           icon: token.image,
-  //         },
-  //       ];
-
-  //     case 'SwapUz':
-  //     case 'swapuz':
-  //       return (token.network || []).map((net: any) => ({
-  //         tokenName: token.name,
-  //         tokenSymbol: token.shortName || token.shotName || token.symbol,
-  //         network: net.fullName || net.name,
-  //         partners: ['SwapUz'],
-  //         icon: token.image,
-  //       }));
-
-  //     case 'Exolix':
-  //     case 'exolix':
-  //       return (token.networks || []).map((net: any) => ({
-  //         tokenName: token.name,
-  //         tokenSymbol: token.code,
-  //         network: net.name || net.network,
-  //         partners: ['Exolix'],
-  //         icon: token.icon,
-  //       }));
-
-  //     default:
-  //       return [];
-  //   }
-  // }
-
-  // private mergeTokens(tokens: any[]) {
-  //   const iconPriority = ['SimpleSwap', 'Exolix', 'SwapUz', 'ChangeNow'];
-  //   const tokenMap = new Map();
-
-  //   tokens.forEach((t: any) => {
-  //     const key = `${t.tokenSymbol.toLowerCase()}-${(t.network || '').toLowerCase()}`;
-
-  //     if (!tokenMap.has(key)) {
-  //       tokenMap.set(key, { ...t });
-  //     } else {
-  //       const existing = tokenMap.get(key);
-  //       existing.partners = Array.from(
-  //         new Set([...existing.partners, ...t.partners]),
-  //       );
-
-  //       // Pick icon by priority
-  //       const currentBest = iconPriority.indexOf(
-  //         existing.partners.find((p: any) => iconPriority.includes(p)),
-  //       );
-  //       const newBest = iconPriority.indexOf(
-  //         t.partners.find((p: any) => iconPriority.includes(p)),
-  //       );
-
-  //       if (newBest !== -1 && (currentBest === -1 || newBest < currentBest)) {
-  //         existing.icon = t.icon;
-  //       }
-  //     }
-  //   });
-
-  //   const mergedList = Array.from(tokenMap.values());
-
-  //   return {
-  //     popular: mergedList.filter((t) => t.partners.length > 1),
-  //     others: mergedList.filter((t) => t.partners.length === 1),
-  //   };
-  // }
-  // function to get the X-API-SIGN of fixed float
-  // private getHmacSign(payload: any, secret: string) {
-  //   let message: string;
-
-  //   if (!payload || Object.keys(payload).length === 0) {
-  //     message = '';
-  //   } else {
-  //     message = JSON.stringify(payload);
-  //   }
-
-  //   return crypto.createHmac('sha256', secret).update(message).digest('hex');
-  // }
 }

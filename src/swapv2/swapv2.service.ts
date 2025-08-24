@@ -1,7 +1,8 @@
-import { Injectable, Query } from '@nestjs/common';
+import { BadRequestException, Injectable, Query } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AffiliateService } from './affiliate.service';
 import { GetTokensQuery } from './dto/getTokensQuery.dto';
+import { GetSwapRequestDto } from './dto/getSwapRequest.dto';
 
 @Injectable()
 export class Swapv2Service {
@@ -29,5 +30,23 @@ export class Swapv2Service {
       default:
         return await this.getAllTokens(getTokensQuery.page);
     }
+  }
+
+  async swapRequest(getSwapRequest: GetSwapRequestDto) {
+    const { from_currency, to_currency, from_network, to_network, amount } =
+      getSwapRequest;
+
+    if (
+      !from_currency ||
+      !to_currency ||
+      !from_network ||
+      !to_network ||
+      !amount
+    ) {
+      throw new BadRequestException('Incomplete parameters');
+    }
+
+
+    // Check one of the partners for the prices
   }
 }
