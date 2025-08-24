@@ -1,10 +1,10 @@
 import { Inject } from '@nestjs/common';
-import { ProviderService } from '../providers/provider.service';
+import { ProvidersService } from 'src/providers/providers.service';
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 
 export class TokenAggregatorService {
   constructor(
-    private readonly providerService: ProviderService,
+    private readonly providerService: ProvidersService,
     // private readonly token
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}

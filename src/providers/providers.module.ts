@@ -1,9 +1,23 @@
 import { Module } from '@nestjs/common';
 import { ProvidersService } from './providers.service';
-import { ProvidersController } from './providers.controller';
+import { ExolixProvider } from './exolix.provider';
+import { ChangeNowProvider } from './changeNow.provider';
+import { FixedFloatProvider } from './fixedfloat.provider';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
-  controllers: [ProvidersController],
-  providers: [ProvidersService],
+  imports: [HttpModule],
+  providers: [
+    ProvidersService,
+    ExolixProvider,
+    ChangeNowProvider,
+    FixedFloatProvider,
+  ],
+  exports: [
+    ProvidersService,
+    ExolixProvider,
+    ChangeNowProvider,
+    FixedFloatProvider,
+  ],
 })
 export class ProvidersModule {}
