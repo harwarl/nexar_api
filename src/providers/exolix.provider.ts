@@ -3,39 +3,52 @@ import { ProviderToken, TokenProvider } from './provider.interface';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { symbol } from 'joi';
+import { ConfigService } from '@nestjs/config';
+import { AFFILIATE_DATA } from './provider.data';
 
 @Injectable()
 export class ExolixProvider implements TokenProvider {
   readonly name = 'exolix';
 
-  constructor(private readonly httpService: HttpService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+  ) {}
 
   async fetchSupportedTokens(): Promise<ProviderToken[]> {
     try {
-      const { data } = await firstValueFrom(
-        this.httpService.get('', {
-          params: {
-            withNetworks: true,
-            page: 1,
-            size: 100,
-          },
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-        }),
-      );
+      const pageSize = 100;
+      let page = 1;
+      let allTokens: any[] = [];
+      let totalCount = 0;
 
-      if (!data?.data) {
-        throw new Error('Invalid response structure from Exolix');
-      }
+      do {
+        const { data } = await firstValueFrom(
+          this.httpService.get(
+            `${AFFILIATE_DATA.EXOLIX.baseUrl}${AFFILIATE_DATA.EXOLIX.endpoints.tokens}?withNetworks=true&page=${page}&size=${pageSize}`,
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                Authorization: AFFILIATE_DATA.EXOLIX.apiKey,
+              },
+            },
+          ),
+        );
 
-      return data.map((item: any) => ({
-        symbol: item.code,
-        network: item.network,
-        name: item.name,
-        isActive: item.status === 'active',
-      }));
+        if (!data?.data) {
+          throw new Error('Invalid response structure from Exolix');
+        }
+
+        if (page === 1) {
+          totalCount = data.count;
+        }
+
+        allTokens = [...allTokens, ...data.data];
+        page++;
+      } while (allTokens.length < totalCount);
+
+      return this.transformExolixData(allTokens);
     } catch (error) {
       throw new Error(`Failed to fetch ${this.name} tokens: ${error.message}`);
     }

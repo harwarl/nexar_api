@@ -52,11 +52,10 @@ export class NetworkDiscoveryService {
     originalName: string,
     providerName: string,
   ): void {
-    // TODO: update the provider ticker for the current provider
     const network: Network = {
       id: this.networkIdCounter++,
       slug: slug,
-      name: this.formatNetworkName(originalName), // TODO: format the original name
+      name: this.formatNetworkName(originalName),
       aliases: [originalName, slug],
       // Initialize all provider symbols as null
       ticker_fixedfloat: null,
