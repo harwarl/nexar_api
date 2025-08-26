@@ -9,6 +9,8 @@ export class TokensService implements OnModuleInit {
   private readonly logger = new Logger(TokensService.name);
   private tokenCounter = 1;
   private isNetworkDiscovered = false;
+  private allTokens: any[] = [];
+  private lastUpdated: Date | null = null;
 
   constructor(
     private readonly providerService: ProvidersService,
@@ -16,7 +18,14 @@ export class TokensService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    this.logger.log('---- Loading the networks -----');
     await this.discoverNetworks();
+    this.logger.log('---- Networks Loaded ----');
+    this.logger.log('Start Token Aggregation ...');
+    await this.loadAllTokens();
+    this.logger.log(
+      `Token aggregation completed. Loaded ${this.allTokens.length} tokens.`,
+    );
   }
 
   private async discoverNetworks(): Promise<void> {
@@ -27,7 +36,7 @@ export class TokensService implements OnModuleInit {
     }
   }
 
-  async getTokens() {
+  async loadAllTokens() {
     if (!this.isNetworkDiscovered) {
       await this.discoverNetworks();
     }
@@ -39,9 +48,34 @@ export class TokensService implements OnModuleInit {
 
     const allTokens = this.processProviderResults(providerResults);
     const aggregatedTokens = this.aggregateTokens(allTokens);
-    const formattedResponse = this.formatTokenResponse(aggregatedTokens);
+    this.allTokens = this.formatTokenResponse(aggregatedTokens);
 
-    return { results: formattedResponse };
+    // return { results: formattedResponse };
+    this.lastUpdated = new Date();
+  }
+
+  async getTokens(): Promise<{
+    results: TokenResponse[];
+    last_updated: string;
+    count: number;
+  }> {
+    return {
+      results: this.allTokens,
+      last_updated: this.lastUpdated?.toISOString() || new Date().toISOString(),
+      count: this.getTokenCount(),
+    };
+  }
+
+  async refreshTokens(): Promise<void> {
+    this.logger.log('Refreshing tokens');
+    await this.loadAllTokens();
+    this.logger.log(
+      `Tokens refreshed. Now have ${this.allTokens.length} tokens.`,
+    );
+  }
+
+  private getTokenCount(): number {
+    return this.allTokens.length || 0;
   }
 
   private async fetchProviderTokens(provider: TokenProvider): Promise<{

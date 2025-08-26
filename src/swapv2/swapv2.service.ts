@@ -7,15 +7,8 @@ import { TokensService } from 'src/tokens/tokens.service';
 export class Swapv2Service {
   constructor(private readonly tokenService: TokensService) {}
 
-  // Get Popular tokens from the affiliate service
-  private async getPopularTokens() {}
-
-  // Get all the tokens
-  private async getAllTokens(page: number = 1) {}
-
   async getTokens(getTokensQuery: GetTokensQuery) {
-    const tokens = await this.tokenService.getTokens();
-    return tokens;
+    return this.tokenService.getTokens();
   }
 
   async swapRequest(getSwapRequest: GetSwapRequestDto) {
