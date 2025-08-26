@@ -13,7 +13,7 @@ export class ProvidersService {
     // Inject all other providers
   ) {
     this.providers = [
-      // changeNowProvider,
+      changeNowProvider,
       exolixProvider,
       // Add all other providers
     ];

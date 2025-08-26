@@ -17,7 +17,11 @@ export class NetworkDiscoveryService {
       await this.discoverNetworksFromProvider(provider);
     }
 
-    return Array.from(this.discoveredNetworks.values());
+    const networks = Array.from(this.discoveredNetworks.values());
+
+    console.log({ networks });
+
+    return networks;
   }
 
   // Discover the networks from the provider
@@ -27,12 +31,21 @@ export class NetworkDiscoveryService {
 
       for (const token of tokens) {
         const networkSlug = this.normalizeNetworkSlug(token.network);
+        console.log({ networkSlug });
 
         if (!this.discoveredNetworks.has(networkSlug)) {
           this.createNetworkFromProvider(
             networkSlug,
             token.network,
             provider.name,
+          );
+        } else {
+          // Update the existing network
+          this.updateExistingNetwork(
+            networkSlug,
+            token.network,
+            provider.name,
+            token.alias,
           );
         }
       }
@@ -41,6 +54,32 @@ export class NetworkDiscoveryService {
         `Failed to discover networks from ${provider.name}: ${error.message}`,
       );
     }
+  }
+
+  private updateExistingNetwork(
+    slug: string,
+    originalName: string,
+    providerName: string,
+    alias?: string,
+  ): void {
+    const existingNetwork = this.discoveredNetworks.get(slug);
+
+    if (!existingNetwork) return;
+
+    // Add the alias if it doesn't exist
+    if (alias && !existingNetwork.aliases.includes(alias)) {
+      existingNetwork.aliases.push(alias);
+      this.logger.log(`Added Alias "${originalName}" to network`);
+    }
+
+    // Update provider symbol
+    const providerSymbolKey = `ticker_${providerName}` as keyof Network;
+    if (providerSymbolKey in existingNetwork) {
+      (existingNetwork as any)[providerSymbolKey] = originalName;
+    }
+
+    // Update the network in the map
+    this.discoveredNetworks.set(slug, existingNetwork);
   }
 
   private normalizeNetworkSlug(networkName: string): string {
@@ -72,7 +111,7 @@ export class NetworkDiscoveryService {
     };
 
     // Set provider's symbol for this network
-    const providerSymbolKey = `symbol_${providerName}` as keyof Network;
+    const providerSymbolKey = `ticker_${providerName}` as keyof Network;
     if (providerSymbolKey in network) {
       (network as any)[providerSymbolKey] = originalName;
     }

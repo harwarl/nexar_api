@@ -8,6 +8,7 @@ export interface ProviderToken {
   symbol: string;
   network: string;
   name?: string;
+  alias?: string;
   isActive?: boolean;
   iconUrl?: string;
   // Add other provider specific fields
