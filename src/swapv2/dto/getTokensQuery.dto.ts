@@ -1,9 +1,15 @@
-import { IsNumber, IsString } from 'class-validator';
+import { IsBoolean, IsNumber, IsString } from 'class-validator';
 
-export class GetTokensQuery {
+export class GetTokensQueryDto {
   @IsNumber()
   page: number;
 
   @IsString()
-  type: string;
+  search: string;
+
+  @IsString()
+  network: string;
+
+  @IsBoolean()
+  isActive: boolean;
 }

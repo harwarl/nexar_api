@@ -54,15 +54,62 @@ export class TokensService implements OnModuleInit {
     this.lastUpdated = new Date();
   }
 
-  async getTokens(): Promise<{
+  async getTokens(query: any): Promise<{
     results: TokenResponse[];
+    pagination: any;
     last_updated: string;
-    count: number;
   }> {
+    const { page = 1, limit = 100, search, network, isActive } = query;
+
+    // Filter tokens based on query parameters
+    let filteredTokens = this.allTokens;
+
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredTokens = filteredTokens.filter((token: any) => {
+        token.code.toLowerCase().includes(searchLower) ||
+          token.code_name.toLowerCase().includes(searchLower);
+      });
+    }
+
+    if (network) {
+      filteredTokens = filteredTokens.filter((token: any) => {
+        token.token_network.slug.toLowerCase() === network.toLowerCase() ||
+          token.token_network.aliases.some(
+            (alias: string) => alias.toLowerCase() === network.toLowerCase(),
+          );
+      });
+    }
+
+    if (isActive !== undefined) {
+      filteredTokens = filteredTokens.filter(
+        (token) => token.is_active === isActive,
+      );
+    }
+
+    // Calculate pagination
+    const total = filteredTokens.length;
+    const totalPages = Math.ceil(total / limit);
+    const currentPage = Math.min(Math.max(page, 1), totalPages || 1);
+    const startIndex = (currentPage - 1) * limit;
+    const endIndex = Math.min(startIndex + limit, total);
+
+    // Get paginated result
+    const paginatedResults = filteredTokens.slice(startIndex, endIndex);
+
     return {
-      results: this.allTokens,
+      results: paginatedResults,
+      pagination: {
+        total,
+        page: currentPage,
+        limit,
+        total_pages: totalPages,
+        has_next: currentPage < totalPages,
+        has_prev: currentPage > 1,
+        next_page: currentPage < totalPages ? currentPage + 1 : null,
+        prev_page: currentPage > 1 ? currentPage - 1 : null,
+      },
       last_updated: this.lastUpdated?.toISOString() || new Date().toISOString(),
-      count: this.getTokenCount(),
     };
   }
 
