@@ -17,11 +17,7 @@ export class NetworkDiscoveryService {
       await this.discoverNetworksFromProvider(provider);
     }
 
-    const networks = Array.from(this.discoveredNetworks.values());
-
-    console.log({ networks });
-
-    return networks;
+    return Array.from(this.discoveredNetworks.values());
   }
 
   // Discover the networks from the provider
@@ -31,7 +27,6 @@ export class NetworkDiscoveryService {
 
       for (const token of tokens) {
         const networkSlug = this.normalizeNetworkSlug(token.network);
-        console.log({ networkSlug });
 
         if (!this.discoveredNetworks.has(networkSlug)) {
           this.createNetworkFromProvider(
@@ -66,6 +61,9 @@ export class NetworkDiscoveryService {
 
     if (!existingNetwork) return;
 
+    console.log('Aliases');
+    console.log(existingNetwork.aliases);
+    console.log(alias);
     // Add the alias if it doesn't exist
     if (alias && !existingNetwork.aliases.includes(alias)) {
       existingNetwork.aliases.push(alias);

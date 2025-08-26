@@ -8,5 +8,6 @@ import { ProvidersModule } from 'src/providers/providers.module';
 @Module({
   imports: [HttpModule, ProvidersModule],
   providers: [TokensService, NetworkDiscoveryService],
+  exports: [TokensService, NetworkDiscoveryService],
 })
 export class TokensModule {}

@@ -1,35 +1,21 @@
 import { BadRequestException, Injectable, Query } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { AffiliateService } from './affiliate.service';
 import { GetTokensQuery } from './dto/getTokensQuery.dto';
 import { GetSwapRequestDto } from './dto/getSwapRequest.dto';
+import { TokensService } from 'src/tokens/tokens.service';
 
 @Injectable()
 export class Swapv2Service {
-  constructor(
-    private readonly configService: ConfigService,
-    private readonly affiliateService: AffiliateService,
-  ) {}
+  constructor(private readonly tokenService: TokensService) {}
 
   // Get Popular tokens from the affiliate service
-  private async getPopularTokens() {
-    const tokens = await this.affiliateService.getPopularTokens();
-    return tokens;
-  }
+  private async getPopularTokens() {}
 
   // Get all the tokens
-  private async getAllTokens(page: number = 1) {
-    return await this.affiliateService.getAllTokens(page);
-  }
+  private async getAllTokens(page: number = 1) {}
 
   async getTokens(getTokensQuery: GetTokensQuery) {
-    switch (getTokensQuery.type) {
-      case 'popular':
-        return await this.getPopularTokens();
-
-      default:
-        return await this.getAllTokens(getTokensQuery.page);
-    }
+    const tokens = await this.tokenService.getTokens();
+    return tokens;
   }
 
   async swapRequest(getSwapRequest: GetSwapRequestDto) {
@@ -45,7 +31,6 @@ export class Swapv2Service {
     ) {
       throw new BadRequestException('Incomplete parameters');
     }
-
 
     // Check one of the partners for the prices
   }
