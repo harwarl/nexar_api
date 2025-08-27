@@ -5,6 +5,9 @@ export interface TokenData {
   name: string;
   networkSlug: string;
   iconUrl?: string;
+  coingecko_id?: string;
+  coingecko_name?: string;
+  coingecko_symbol?: string;
   providers: {
     [providerName: string]: {
       symbol: string;

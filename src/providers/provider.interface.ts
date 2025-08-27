@@ -11,6 +11,7 @@ export interface ProviderToken {
   alias?: string;
   isActive?: boolean;
   iconUrl?: string;
+  providerMetadata?: any;
   // Add other provider specific fields
 }
 

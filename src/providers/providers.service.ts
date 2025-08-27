@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { TokenProvider } from './provider.interface';
 import { ChangeNowProvider } from './changeNow.provider';
 import { ExolixProvider } from './exolix.provider';
+import { CoingeckoProvider } from './coingecko.provider';
 
 @Injectable()
 export class ProvidersService {
@@ -10,11 +11,13 @@ export class ProvidersService {
   constructor(
     private readonly changeNowProvider: ChangeNowProvider,
     private readonly exolixProvider: ExolixProvider,
+    private readonly coingeckoProvider: CoingeckoProvider,
     // Inject all other providers
   ) {
     this.providers = [
-      changeNowProvider,
-      exolixProvider,
+      this.coingeckoProvider,
+      this.changeNowProvider,
+      this.exolixProvider,
       // Add all other providers
     ];
   }

@@ -3,6 +3,7 @@ import { NetworkDiscoveryService } from 'src/networks/network-discovery.service'
 import { ProviderToken, TokenProvider } from 'src/providers/provider.interface';
 import { ProvidersService } from 'src/providers/providers.service';
 import { TokenData, TokenResponse } from './tokens.interface';
+import { AFFILIATE_DATA } from 'src/providers/provider.data';
 
 @Injectable()
 export class TokensService implements OnModuleInit {
@@ -192,6 +193,18 @@ export class TokensService implements OnModuleInit {
           networkSlug: network.slug,
           iconUrl: token.iconUrl,
           providers: {},
+          coingecko_id:
+            provider === AFFILIATE_DATA.COINGECKO.name
+              ? token.providerMetadata.coingecko_id
+              : null,
+          coingecko_name:
+            provider === AFFILIATE_DATA.COINGECKO.name
+              ? token.providerMetadata.coingecko_name
+              : null,
+          coingecko_symbol:
+            provider === AFFILIATE_DATA.COINGECKO.name
+              ? token.providerMetadata.coingecko_symbol
+              : null,
         });
       }
 
@@ -247,12 +260,16 @@ export class TokensService implements OnModuleInit {
         ticker_nanswap: null,
         ticker_changelly: null,
         // Coingecko fields
-        coingecko_id: null,
-        coingecko_name: null,
-        coingecko_symbol: null,
+        coingecko_id: tokenData.coingecko_id,
+        coingecko_name: tokenData.coingecko_name,
+        coingecko_symbol: tokenData.coingecko_symbol,
         coingecko_rank: null,
-        last_coingecko_update: null,
+        last_coingecko_update: tokenData.coingecko_id
+          ? new Date().toISOString()
+          : null,
       };
+
+      console.log({ response });
 
       // Set provider-specific symbols
       for (const [providerName, providerData] of Object.entries(

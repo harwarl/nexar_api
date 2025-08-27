@@ -21,7 +21,7 @@ interface ChangeNowCurrency {
 
 @Injectable()
 export class ChangeNowProvider implements TokenProvider {
-  readonly name = 'changenow';
+  readonly name = AFFILIATE_DATA.CHANGENOW.name;
 
   constructor(
     private readonly httpService: HttpService,

@@ -4,6 +4,7 @@ import { ExolixProvider } from './exolix.provider';
 import { ChangeNowProvider } from './changeNow.provider';
 import { FixedFloatProvider } from './fixedfloat.provider';
 import { HttpModule } from '@nestjs/axios';
+import { CoingeckoProvider } from './coingecko.provider';
 
 @Module({
   imports: [HttpModule],
@@ -12,12 +13,14 @@ import { HttpModule } from '@nestjs/axios';
     ExolixProvider,
     ChangeNowProvider,
     FixedFloatProvider,
+    CoingeckoProvider,
   ],
   exports: [
     ProvidersService,
-    ExolixProvider,
-    ChangeNowProvider,
-    FixedFloatProvider,
+    // ExolixProvider,
+    // ChangeNowProvider,
+    // FixedFloatProvider,
+    // CoingeckoProvider,
   ],
 })
 export class ProvidersModule {}
