@@ -13,19 +13,14 @@ export class Swapv2Service {
   }
 
   async swapRequest(getSwapRequest: GetSwapRequestDto) {
-    const { from_currency, to_currency, from_network, to_network, amount } =
-      getSwapRequest;
-
-    if (
-      !from_currency ||
-      !to_currency ||
-      !from_network ||
-      !to_network ||
-      !amount
-    ) {
-      throw new BadRequestException('Incomplete parameters');
-    }
-
-    // Check one of the partners for the prices
+    const {
+      direction,
+      from_amount,
+      from_currency,
+      from_network,
+      to_currency,
+      to_network,
+      uuid_request,
+    } = getSwapRequest;
   }
 }

@@ -2,13 +2,23 @@ import { IsNumber, IsString } from 'class-validator';
 
 export class GetSwapRequestDto {
   @IsString()
-  from_currency: string;
+  direction: string;
+
   @IsString()
-  to_currency: string;
+  from_amount: string;
+
+  @IsString()
+  from_currency: string;
+
   @IsString()
   from_network: string;
+
+  @IsString()
+  to_currency: string;
+
   @IsString()
   to_network: string;
-  @IsNumber()
-  amount: number;
+
+  @IsString()
+  uuid_request: string;
 }

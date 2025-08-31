@@ -15,12 +15,6 @@ import { CoingeckoProvider } from './coingecko.provider';
     FixedFloatProvider,
     CoingeckoProvider,
   ],
-  exports: [
-    ProvidersService,
-    // ExolixProvider,
-    // ChangeNowProvider,
-    // FixedFloatProvider,
-    // CoingeckoProvider,
-  ],
+  exports: [ProvidersService, CoingeckoProvider],
 })
 export class ProvidersModule {}

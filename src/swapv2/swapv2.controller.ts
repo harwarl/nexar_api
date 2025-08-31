@@ -17,7 +17,7 @@ export class Swapv2Controller {
   // This also creates a transaction body that will be saved for the user
   @Post('swap_request')
   async postSwapRequest(@Body() swapRequestDto: GetSwapRequestDto) {
-    console.log({ swapRequestDto });
+    return this.swapv2Service.swapRequest(swapRequestDto);
   }
 
   // Get the minimal Amount

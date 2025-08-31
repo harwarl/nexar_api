@@ -54,7 +54,7 @@ export class ChangeNowProvider implements TokenProvider {
 
       if (symbol && network) {
         tokens.push({
-          symbol: symbol,
+          symbol: currency.ticker,
           network: network,
           alias: alias,
           iconUrl: currency.image,

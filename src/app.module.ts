@@ -17,6 +17,7 @@ import { Swapv2Module } from './swapv2/swapv2.module';
 import { NetworksModule } from './networks/networks.module';
 import { ProvidersModule } from './providers/providers.module';
 import { TokensModule } from './tokens/tokens.module';
+import { ExchangeModule } from './exchange/exchange.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { TokensModule } from './tokens/tokens.module';
     NetworksModule,
     ProvidersModule,
     TokensModule,
+    ExchangeModule,
   ],
   controllers: [AppController],
   providers: [

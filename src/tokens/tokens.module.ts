@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { TokensService } from './tokens.service';
-import { ProvidersService } from 'src/providers/providers.service';
 import { NetworkDiscoveryService } from 'src/networks/network-discovery.service';
 import { HttpModule } from '@nestjs/axios';
 import { ProvidersModule } from 'src/providers/providers.module';

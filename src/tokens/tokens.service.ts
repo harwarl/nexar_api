@@ -55,6 +55,10 @@ export class TokensService implements OnModuleInit {
     this.lastUpdated = new Date();
   }
 
+  getAllTokens(): TokenResponse[] {
+    return this.allTokens;
+  }
+
   async getTokens(query: any): Promise<{
     results: TokenResponse[];
     pagination: any;
@@ -268,8 +272,6 @@ export class TokensService implements OnModuleInit {
           ? new Date().toISOString()
           : null,
       };
-
-      console.log({ response });
 
       // Set provider-specific symbols
       for (const [providerName, providerData] of Object.entries(
