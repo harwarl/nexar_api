@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ProviderToken, TokenProvider } from './provider.interface';
+import { ProviderToken, QuoteData, TokenProvider } from './provider.interface';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { symbol } from 'joi';
@@ -40,6 +40,22 @@ export class ChangeNowProvider implements TokenProvider {
       return changeNowData;
     } catch (error) {
       throw new Error(`Failed to fetch ${this.name} tokens: ${error.message}`);
+    }
+  }
+
+  async fetchQuote(getQuoteData: QuoteData): Promise<any> {
+    try {
+      const { data } = await firstValueFrom(
+        this.httpService.get(
+          `${this.configService.get(AFFILIATE_DATA.CHANGENOW.baseUrl)}/min-amount/${getQuoteData.fromCurrency}_${getQuoteData.toCurrency}?api_key=${this.configService.get<string>(AFFILIATE_DATA.CHANGENOW.apiKey)}`,
+        ),
+      );
+
+      console.log({ changeNowDataEstimated: data });
+
+      return data;
+    } catch (error) {
+      throw new Error(`Failed to get the rate for ${this.name}`);
     }
   }
 

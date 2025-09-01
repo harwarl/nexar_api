@@ -7,6 +7,10 @@ import {
   ProviderQuote,
 } from './exchange.interface';
 import { TokenResponse } from 'src/tokens/tokens.interface';
+import { AFFILIATES } from 'src/providers/provider.data';
+import { ChangeNowProvider } from 'src/providers/changeNow.provider';
+import { ExolixProvider } from 'src/providers/exolix.provider';
+import { ProviderQuoteResponse } from 'src/providers/provider.interface';
 
 export interface ProviderSupport {
   provider: string;
@@ -23,6 +27,8 @@ export class ExchangeService {
   constructor(
     private readonly tokensService: TokensService,
     private readonly coingeckoProvider: CoingeckoProvider,
+    private readonly exolixProvider: ExolixProvider,
+    private readonly changeNowProvider: ChangeNowProvider,
   ) {}
 
   // Calculates the exchnage rates
@@ -93,7 +99,7 @@ export class ExchangeService {
     toCurrency: string,
     fromNetwork: string,
     toNetwork: string,
-    // fromAmount: number,
+    fromAmount: number,
     // fromPriceInUsdt: number,
     // toPriceInUsdt: number,
   ): Promise<ProviderQuote[]> {
@@ -125,16 +131,115 @@ export class ExchangeService {
     if (commonProviders.length === 0)
       throw new Error('No Common providers found');
 
+    const fromPriceInUsdt = await this.coingeckoProvider.getTokenPriceInUSD(
+      fromToken.coingecko_id,
+    );
+
+    const toPriceInUsdt: number = 0;
+
     // Get the quote for the providers
+    const quotePromises = commonProviders.map(async (providerName: any) => {
+      try {
+        let providerResponse: any;
+
+        switch (providerName) {
+          case AFFILIATES.CHANGENOW:
+            // get the quote from change now provider
+            providerResponse = await this.changeNowProvider.fetchQuote({
+              fromCurrency: fromToken.ticker_changenow,
+              toCurrency: toToken.ticker_changenow,
+              amount: fromAmount,
+            });
+
+            // providerResponse.estimatedAmount
+            // if The estimated amount is greater than the already stated, update
+            break;
+
+          // get the quote from exolix provider
+          case AFFILIATES.EXOLIX:
+            providerResponse = await this.exolixProvider.fetchQuote({
+              fromCurrency: fromToken.ticker_exolix,
+              fromNetwork: fromToken.network_name,
+              toCurrency: toToken.ticker_exolix,
+              toNetwork: toToken.ticker_exolix,
+              amount: fromAmount,
+            });
+
+            // if The estimated amount is greater than the already stated, update
+            break;
+
+          // Add more quotes in here
+
+          default:
+            return null;
+        }
+
+        return this.transformToStandardQuote(
+          providerResponse,
+          providerName,
+          fromAmount,
+          Number(fromPriceInUsdt) * fromAmount,
+          toPriceInUsdt,
+        );
+      } catch (error) {
+        console.error(`Error fetching quote from ${providerName}:`, error);
+        return null;
+      }
+    });
+
     return;
   }
 
-  // Gets the provider Quote
-  private getQuote(
+  // Get's the provider Quote
+  private async transformToStandardQuote(
+    providerResponse: any,
     providerName: string,
-    tokenA: TokenResponse,
-    tokenB: TokenResponse,
-  ) {}
+    fromAmount: number,
+    fromPriceInUsdt: number,
+    toPriceInUsdt: number,
+  ): Promise<any> {
+    // ToDO: use ProviderQuote Interface
+    let estimatedAmountTo: number;
+    let estimatedAmountFrom: number;
+    let exchangeRate: number;
+
+    switch (providerName) {
+      case AFFILIATES.CHANGENOW:
+        estimatedAmountTo = providerResponse.estimatedAmount;
+        estimatedAmountFrom = fromAmount;
+        exchangeRate = estimatedAmount / fromAmount;
+        break;
+
+      case AFFILIATES.EXOLIX:
+        estimatedAmountTo = providerResponse.toAmount;
+        estimatedAmountFrom = providerResponse.fromAmount;
+        exchangeRate = providerResponse.rate;
+        break;
+
+      default:
+        throw new Error(`Unsupported Provider ${providerName}`);
+    }
+
+    // Calculate USDT values
+    const estimatedAmountToUsdt = estimatedAmountTo * toPriceInUsdt;
+    const estimatedAmountFromUsdt = estimatedAmountFrom * fromPriceInUsdt;
+
+    return {
+      uid: this.generateUid(),
+      provider: providerName,
+      estimated_amount_to: estimatedAmountTo.toString(),
+      estimated_amount_from: estimatedAmountFrom.toString(),
+      estimated_amount_to_usdt: estimatedAmountToUsdt.toString(),
+      estimated_amount_from_usdt: estimatedAmountFromUsdt.toString(),
+      exchange_rate: exchangeRate.toString(),
+      created_at: new Date().toISOString(),
+    };
+  }
+
+  // Helper method to generate unique ID
+  private generateUid(): string {
+    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
 
   // CHeck the supported providers for the token
   private checkProviders(token: any): ProviderSupport[] {

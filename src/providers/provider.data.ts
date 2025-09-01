@@ -15,6 +15,7 @@ export const AFFILIATE_DATA = {
     endpoints: {
       tokens: 'currencies',
       chains: 'currencies/networks',
+      getRate: 'rate',
       getTransactions: 'transactions',
       getTransactionById: 'transactions/', // expects ID as param
       createExchangeTxn: 'transactions', // POST with body
@@ -29,7 +30,7 @@ export const AFFILIATE_DATA = {
       getTransactions: 'exchanges', // query: from, to, amount, fromNetwork, toNetwork
       getTransactionById: 'exchanges/', // expects public ID as param
       confirmTransaction: 'exchanges', // POST with body
-      getMinimumAmount: 'ranges',
+      getRate: 'ranges',
     },
   },
   COINGECKO: {

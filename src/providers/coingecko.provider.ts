@@ -26,7 +26,7 @@ export class CoingeckoProvider implements TokenProvider {
     try {
       const { data } = await firstValueFrom(
         this.httpService.get<CoinGeckoCoin[]>(
-          `${AFFILIATE_DATA.COINGECKO.baseUrl}?include_platform=true`,
+          `${AFFILIATE_DATA.COINGECKO.baseUrl}/list?include_platform=true`,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -42,6 +42,40 @@ export class CoingeckoProvider implements TokenProvider {
       }
 
       return this.transformCoinsToTokens(data);
+    } catch (error) {
+      this.logger.error(`Failed to fetch CoinGecko coins: ${error.message}`);
+      throw new Error(`CoinGecko API error: ${error.message}`);
+    }
+  }
+
+  async getTokenPriceInUSD(coingeckoId: string): Promise<{
+    priceInUsd: string;
+  }> {
+    const url = `https://api.coingecko.com/api/v3/coins/${'Privix'}?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false&dex_pair_format=symbol`;
+
+    try {
+      const { data } = await firstValueFrom(
+        this.httpService.get(
+          `${AFFILIATE_DATA.COINGECKO.baseUrl}/coins/${coingeckoId}?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false&dex_pair_format=symbol`,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              'x-cg-demo-api-key': AFFILIATE_DATA.COINGECKO.apiKey,
+            },
+          },
+        ),
+      );
+
+      if (!data || !data?.market_data?.current_price?.usd) {
+        throw new Error('Invalid response structure from Coingecko');
+      }
+
+      console.log({ data: data.market_data.current_price.usd });
+
+      return {
+        priceInUsd: data.market_data.current_price.usd,
+      };
     } catch (error) {
       this.logger.error(`Failed to fetch CoinGecko coins: ${error.message}`);
       throw new Error(`CoinGecko API error: ${error.message}`);

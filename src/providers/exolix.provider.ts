@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ProviderToken, TokenProvider } from './provider.interface';
+import { ProviderToken, QuoteData, TokenProvider } from './provider.interface';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { symbol } from 'joi';
@@ -51,6 +51,32 @@ export class ExolixProvider implements TokenProvider {
       return this.transformExolixData(allTokens);
     } catch (error) {
       throw new Error(`Failed to fetch ${this.name} tokens: ${error.message}`);
+    }
+  }
+
+  async fetchQuote(getQuoteData: QuoteData): Promise<any> {
+    try {
+      const { data } = await firstValueFrom(
+        this.httpService.get(
+          `${AFFILIATE_DATA.EXOLIX.baseUrl}${AFFILIATE_DATA.EXOLIX.endpoints.getRate}`,
+          {
+            params: {
+              coinFrom: getQuoteData.fromCurrency,
+              networkFrom: getQuoteData.fromNetwork,
+              coinTo: getQuoteData.toCurrency,
+              networkTo: getQuoteData.toNetwork,
+              amount: getQuoteData.amount,
+              rateType: 'fixed',
+            },
+          },
+        ),
+      );
+
+      console.log({ data });
+
+      return data;
+    } catch (error) {
+      throw new Error(`Failed to get the rate for ${this.name}`);
     }
   }
 

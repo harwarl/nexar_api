@@ -1,6 +1,7 @@
 export interface TokenProvider {
   readonly name: string;
   fetchSupportedTokens(): Promise<ProviderToken[]>;
+  fetchQuote?(getQuoteData: QuoteData): Promise<any>;
   fetchSupportedNetworks?(): Promise<ProviderNetwork[]>;
 }
 
@@ -22,3 +23,13 @@ export interface ProviderNetwork {
   isActive: boolean;
   features?: string[];
 }
+
+export interface QuoteData {
+  fromCurrency: string;
+  toCurrency: string;
+  amount: number;
+  fromNetwork?: string;
+  toNetwork?: string;
+}
+
+export interface ProviderQuoteResponse {}
