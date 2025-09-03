@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { ProviderToken, QuoteData, TokenProvider } from './provider.interface';
+import {
+  fetchQuoteResponse,
+  ProviderToken,
+  QuoteData,
+  TokenProvider,
+} from './provider.interface';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { symbol } from 'joi';
@@ -54,29 +59,68 @@ export class ExolixProvider implements TokenProvider {
     }
   }
 
-  async fetchQuote(getQuoteData: QuoteData): Promise<any> {
+  async fetchQuote(getQuoteData: QuoteData): Promise<fetchQuoteResponse> {
+    console.log(
+      `${AFFILIATE_DATA.EXOLIX.baseUrl}${AFFILIATE_DATA.EXOLIX.endpoints.getRate}`,
+    );
     try {
       const { data } = await firstValueFrom(
         this.httpService.get(
-          `${AFFILIATE_DATA.EXOLIX.baseUrl}${AFFILIATE_DATA.EXOLIX.endpoints.getRate}`,
+          `${AFFILIATE_DATA.EXOLIX.baseUrl}${AFFILIATE_DATA.EXOLIX.endpoints.getRate}?coinFrom=${getQuoteData.fromCurrency}&networkFrom=${getQuoteData.fromNetwork}&coinTo=${'USDT'}&networkTo=${'ETH'}&amount=${getQuoteData.amount}&rateType=fixed`,
           {
-            params: {
-              coinFrom: getQuoteData.fromCurrency,
-              networkFrom: getQuoteData.fromNetwork,
-              coinTo: getQuoteData.toCurrency,
-              networkTo: getQuoteData.toNetwork,
-              amount: getQuoteData.amount,
-              rateType: 'fixed',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              Authorization: AFFILIATE_DATA.EXOLIX.apiKey,
             },
           },
         ),
       );
 
-      console.log({ data });
-
-      return data;
+      //     data: {
+      //   fromAmount: 7000,
+      //   toAmount: 621.447083,
+      //   rate: 0.08877815,
+      //   message: null,
+      //   minAmount: 545.05005562,
+      //   withdrawMin: 0.175665991137243,
+      //   maxAmount: 19017.11307216
+      // }
+      return {
+        isError: false,
+        isMessage: false,
+        minAmount: data.minAmount,
+        maxAmount: data.maxAmount,
+        fromAmount: getQuoteData.amount,
+        toAmount: data.toAmount,
+        rate: data.rate,
+        message: data.message ?? '',
+      };
     } catch (error) {
-      throw new Error(`Failed to get the rate for ${this.name}`);
+      // ['message', 'name', 'code', 'config', 'request', 'response', 'status'];
+      if (error.response.data.error) {
+        return {
+          isError: true,
+          isMessage: true,
+          minAmount: 0,
+          maxAmount: 0,
+          fromAmount: getQuoteData.amount,
+          toAmount: 0,
+          rate: 0,
+          message: error.response.data.message ?? '',
+        };
+      } else {
+        return {
+          isError: true,
+          isMessage: false,
+          minAmount: 0,
+          maxAmount: 0,
+          fromAmount: getQuoteData.amount,
+          toAmount: 0,
+          rate: 0,
+          message: error.response.data.error ?? '',
+        };
+      }
     }
   }
 

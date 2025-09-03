@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { CoingeckoProvider } from 'src/providers/coingecko.provider';
 import { TokensService } from 'src/tokens/tokens.service';
 import {
+  ExchangeQuote,
   ExchangeRequest,
   ExchangeResponse,
   ProviderQuote,
@@ -10,7 +11,6 @@ import { TokenResponse } from 'src/tokens/tokens.interface';
 import { AFFILIATES } from 'src/providers/provider.data';
 import { ChangeNowProvider } from 'src/providers/changeNow.provider';
 import { ExolixProvider } from 'src/providers/exolix.provider';
-import { ProviderQuoteResponse } from 'src/providers/provider.interface';
 
 export interface ProviderSupport {
   provider: string;
@@ -32,10 +32,43 @@ export class ExchangeService {
   ) {}
 
   // Calculates the exchnage rates
-  async calculateExchangeRate(
-    request: ExchangeRequest,
-  ): Promise<ExchangeResponse> {
-    return;
+  async getExchangeRate(request: ExchangeRequest): Promise<ExchangeResponse> {
+    // ValidateCurrencies and get Rates
+    this.validateCurrencies(
+      request.from_currency,
+      request.to_currency,
+      request.from_network,
+      request.to_network,
+    );
+
+    // Get the provider quotes
+    const providerQuotes = await this.getProviderQuotes(
+      request.from_currency,
+      request.to_currency,
+      request.from_network,
+      request.to_network,
+      Number(request.from_amount),
+    );
+
+    // const bestQuote = await this.getBestQuote();
+
+    return {
+      uid: this.generateUid(),
+      from_currency: request.from_currency,
+      to_currency: request.to_currency,
+      from_network: request.from_network,
+      to_network: request.to_network,
+      from_amount: request.from_amount,
+      to_amount: '',
+      from_amount_usdt: ',',
+      to_amount_usdt: ',',
+      direction: 'SEND',
+      status: 'PENDING',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      quotes: providerQuotes,
+      uuid_request: request.uuid_request,
+    };
   }
 
   // Validate the currencies in the exchange request
@@ -47,50 +80,14 @@ export class ExchangeService {
   ): Promise<void> {
     // Checks if currencies exists on specified networks
 
-    // Get all the tokens
-    const tokens = this.tokensService.getAllTokens();
-
     // Check if the from token exists
-    const fromTokenExists = tokens.some((token: TokenResponse) => {
-      token.code === fromCurrency &&
-        token.network_name.toUpperCase() === fromNetwork.toUpperCase();
-    });
+    const fromTokenExists = this.getTokenFromTokens(fromCurrency, fromNetwork);
 
     // Check if the to token exists
-    const toTokenExists = tokens.some((token: TokenResponse) => {
-      token.code.toUpperCase() === toCurrency.toUpperCase() &&
-        token.network_name.toUpperCase() === toNetwork.toUpperCase();
-    });
+    const toTokenExists = this.getTokenFromTokens(toCurrency, toNetwork);
 
     if (!fromTokenExists || !toTokenExists) {
       throw new Error('Invalid currency or network combination');
-    }
-  }
-
-  // Get price in usdt using coingecko
-  private async getPriceInUSDT(
-    currency: string,
-    network: string,
-  ): Promise<number> {
-    try {
-      // this would call coingecko or other price providers
-      const mockPrices: { [key: string]: number } = {
-        ETH: 2500,
-        BTC: 45000,
-        SOL: 100,
-        USDT: 1,
-        BNB: 300,
-        MATIC: 0.8,
-        AVAX: 35,
-        ADA: 0.5,
-        DOT: 6,
-        XRP: 0.6,
-      };
-
-      return mockPrices[currency] || 1;
-    } catch (error) {
-      this.logger.warn(`Failed to get price for ${currency}: ${error.message}`);
-      return 1; // fallback price
     }
   }
 
@@ -102,10 +99,9 @@ export class ExchangeService {
     fromAmount: number,
     // fromPriceInUsdt: number,
     // toPriceInUsdt: number,
-  ): Promise<ProviderQuote[]> {
+  ): Promise<ExchangeQuote[]> {
     // Get the quote from different Providers
     // Get the quote from the providers with Ticker_{providerName} != null
-
     const fromToken = this.getTokenFromTokens(fromCurrency, fromNetwork);
     if (!fromToken) {
       throw new Error('Could not get the tokens');
@@ -120,6 +116,8 @@ export class ExchangeService {
     const fromProviders = this.checkProviders(fromToken);
     const toProviders = this.checkProviders(toToken);
 
+    console.log({ fromProviders, toProviders });
+
     if (fromProviders.length === 0 || toProviders.length === 0)
       throw new Error(
         'No prorviders found for either the from or the to token',
@@ -127,16 +125,21 @@ export class ExchangeService {
 
     // Get common providers
     const commonProviders = this.getCommonProviders(fromToken, toToken);
+    console.log({ commonProviders });
 
     if (commonProviders.length === 0)
       throw new Error('No Common providers found');
 
+    console.log({ fromToken, toToken });
     const fromPriceInUsdt = await this.coingeckoProvider.getTokenPriceInUSD(
       fromToken.coingecko_id,
     );
 
-    const toPriceInUsdt: number = 0;
+    const toPriceInUsdt = await this.coingeckoProvider.getTokenPriceInUSD(
+      toToken.coingecko_id,
+    );
 
+    let toAmount: number = 1;
     // Get the quote for the providers
     const quotePromises = commonProviders.map(async (providerName: any) => {
       try {
@@ -153,6 +156,10 @@ export class ExchangeService {
 
             // providerResponse.estimatedAmount
             // if The estimated amount is greater than the already stated, update
+            if (providerResponse.estimatedAmount && !providerResponse.warning) {
+              toAmount = providerResponse.estimatedAmount;
+            }
+
             break;
 
           // get the quote from exolix provider
@@ -166,6 +173,10 @@ export class ExchangeService {
             });
 
             // if The estimated amount is greater than the already stated, update
+            if (providerResponse.toAmount) {
+              toAmount = providerResponse.toAmount;
+            }
+
             break;
 
           // Add more quotes in here
@@ -179,7 +190,7 @@ export class ExchangeService {
           providerName,
           fromAmount,
           Number(fromPriceInUsdt) * fromAmount,
-          toPriceInUsdt,
+          Number(toPriceInUsdt),
         );
       } catch (error) {
         console.error(`Error fetching quote from ${providerName}:`, error);
@@ -187,7 +198,9 @@ export class ExchangeService {
       }
     });
 
-    return;
+    // Wait for all quotes and filter out failed ones
+    const quotes = await Promise.all(quotePromises);
+    return quotes.filter((quote): quote is ExchangeQuote => quote !== null);
   }
 
   // Get's the provider Quote
@@ -197,7 +210,7 @@ export class ExchangeService {
     fromAmount: number,
     fromPriceInUsdt: number,
     toPriceInUsdt: number,
-  ): Promise<any> {
+  ): Promise<ExchangeQuote> {
     // ToDO: use ProviderQuote Interface
     let estimatedAmountTo: number;
     let estimatedAmountFrom: number;
@@ -207,7 +220,7 @@ export class ExchangeService {
       case AFFILIATES.CHANGENOW:
         estimatedAmountTo = providerResponse.estimatedAmount;
         estimatedAmountFrom = fromAmount;
-        exchangeRate = estimatedAmount / fromAmount;
+        exchangeRate = estimatedAmountTo / fromAmount;
         break;
 
       case AFFILIATES.EXOLIX:
@@ -285,9 +298,13 @@ export class ExchangeService {
     fromNetwork: string,
   ): TokenResponse | null {
     const tokens = this.tokensService.getAllTokens();
+
     return tokens.find((token: TokenResponse) => {
-      token.code === fromCurrency &&
-        token.network_name.toUpperCase() === fromNetwork.toUpperCase();
+      if (
+        token.code === fromCurrency &&
+        token.token_network.slug === fromNetwork
+      )
+        return token;
     });
   }
 }

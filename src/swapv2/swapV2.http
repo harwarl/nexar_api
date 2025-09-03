@@ -1,4 +1,4 @@
-GET http://localhost:4040/api/v2/swap/tokens
+GET http://localhost:4040/api/v2/swap/tokens?page=7
 Content-Type: application/json
 Accept: application/json
 x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
@@ -9,31 +9,47 @@ Content-Type: application/json
 Accept: application/json
 x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
 
-###   Partners gets Exolix
-GET https://exolix.com/api/v2/currencies?withNetworks=true&page=1&size=100
-Content-Type: application/json
-Accept: application/json
-Authorization: 
-
-### Fixed Float
-POST https://ff.io/api/v2/ccies
-Content-Type: application/json
-Accept: application/json
-X-API-KEY: 
-X-API-SIGN: 
-
-### SWAPUZ
-GET https://api.swapuz.com/api/home/v1/coins
-Content-Type: application/json
-Accept: application/json
-Api-Key:
-
-### Simple Swap
-GET https://api.simpleswap.io/get_all_currencies?api_key=a826bbc0-9549-4749-a718-59a8d30aa9a7
-Content-Type: application/json
-Accept: application/json
-
 ###
-GET https://api.changenow.io/v1/currencies?active=true&fixedRate=true
+POST http://localhost:4040/api/v2/swap/swap_request
 Content-Type: application/json
-Accept: application/json 
+Accept: application/json
+x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
+
+{
+     "direction": "SEND",
+     "from_amount": "0.2",
+     "from_currency": "AI16Z",
+     "from_network": "SOL",
+     "to_currency": "AI16Z",
+     "to_network": "SOL",
+     "uuid_request": "ee43aee4-0176-400e-a8c9-ecad9ddc658b"
+}
+
+# ###   Partners gets Exolix
+# GET https://exolix.com/api/v2/currencies?withNetworks=true&page=1&size=100
+# Content-Type: application/json
+# Accept: application/json
+# Authorization: 
+
+# ### Fixed Float
+# POST https://ff.io/api/v2/ccies
+# Content-Type: application/json
+# Accept: application/json
+# X-API-KEY: 
+# X-API-SIGN: 
+
+# ### SWAPUZ
+# GET https://api.swapuz.com/api/home/v1/coins
+# Content-Type: application/json
+# Accept: application/json
+# Api-Key:
+
+# ### Simple Swap
+# GET https://api.simpleswap.io/get_all_currencies?api_key=a826bbc0-9549-4749-a718-59a8d30aa9a7
+# Content-Type: application/json
+# Accept: application/json
+
+# ###
+# GET https://api.changenow.io/v1/currencies?active=true&fixedRate=true
+# Content-Type: application/json
+# Accept: application/json 

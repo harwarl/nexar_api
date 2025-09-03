@@ -51,12 +51,12 @@ export class CoingeckoProvider implements TokenProvider {
   async getTokenPriceInUSD(coingeckoId: string): Promise<{
     priceInUsd: string;
   }> {
-    const url = `https://api.coingecko.com/api/v3/coins/${'Privix'}?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false&dex_pair_format=symbol`;
+    if (!coingeckoId) throw new Error('Invalid coingecko Id');
 
     try {
       const { data } = await firstValueFrom(
         this.httpService.get(
-          `${AFFILIATE_DATA.COINGECKO.baseUrl}/coins/${coingeckoId}?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false&dex_pair_format=symbol`,
+          `${AFFILIATE_DATA.COINGECKO.baseUrl}${coingeckoId}?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false&dex_pair_format=symbol`,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -70,8 +70,6 @@ export class CoingeckoProvider implements TokenProvider {
       if (!data || !data?.market_data?.current_price?.usd) {
         throw new Error('Invalid response structure from Coingecko');
       }
-
-      console.log({ data: data.market_data.current_price.usd });
 
       return {
         priceInUsd: data.market_data.current_price.usd,

@@ -32,4 +32,13 @@ export interface QuoteData {
   toNetwork?: string;
 }
 
-export interface ProviderQuoteResponse {}
+export interface fetchQuoteResponse {
+  isError: boolean;
+  isMessage: boolean;
+  minAmount?: number;
+  maxAmount?: number;
+  message: string | null;
+  fromAmount: number;
+  toAmount: number;
+  rate: number;
+}

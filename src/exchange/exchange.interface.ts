@@ -6,19 +6,19 @@ export interface ExchangeRequest {
   from_network: string;
   to_network: string;
   from_amount: string;
-  direction: 'SEND' | 'RECIEVE';
+  direction: string;
   uuid_request?: string;
 }
 
 export interface ExchangeQuote {
   uid: string;
   provider: string;
-  estimated_amount: string;
+  estimated_amount_to: string;
   estimated_amount_from: string;
-  estimated_amount_usdt: string;
+  estimated_amount_to_usdt: string;
   estimated_amount_from_usdt: string;
   exchange_rate: string;
-  fee: string;
+  fee?: string;
   created_at: string;
 }
 
@@ -32,8 +32,8 @@ export interface ExchangeResponse {
   to_amount: string;
   from_amount_usdt: string;
   to_amount_usdt: string;
-  direction: 'SEND' | 'RECEIVE';
-  status: 'PENDING' | 'COMPLETED' | 'FAILED';
+  direction: string;
+  status: string;
   created_at: string;
   updated_at: string;
   quotes: ExchangeQuote[];
