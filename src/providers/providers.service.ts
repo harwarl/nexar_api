@@ -15,9 +15,9 @@ export class ProvidersService {
     // Inject all other providers
   ) {
     this.providers = [
-      this.coingeckoProvider,
       this.changeNowProvider,
       this.exolixProvider,
+      this.coingeckoProvider,
       // Add all other providers
     ];
   }

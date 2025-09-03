@@ -45,6 +45,10 @@ export const AFFILIATE_DATA = {
 
 export const NETWORK_MAPPINGS: { [key: string]: string } = {
   erc20: 'ETH',
+  eth: 'ETH',
+  btc: 'BTC',
+  bitcoin: 'BTC',
+  ethereum: 'ETH',
   trc20: 'TRX',
   bsc: 'BSC',
   sol: 'SOL',
@@ -58,7 +62,6 @@ export const NETWORK_MAPPINGS: { [key: string]: string } = {
   base: 'BASE',
   manta: 'MANTA',
   lna: 'LNA',
-  ethereum: 'ETH',
   'binance-smart-chain': 'BSC',
   'polygon-pos': 'POLYGON',
   avalanche: 'AVAX',
@@ -82,7 +85,6 @@ export const NETWORK_MAPPINGS: { [key: string]: string } = {
   tezos: 'TEZOS',
   algorand: 'ALGO',
   stellar: 'XLM',
-  bitcoin: 'BTC',
   litecoin: 'LTC',
   'bitcoin-cash': 'BCH',
   dogecoin: 'DOGE',

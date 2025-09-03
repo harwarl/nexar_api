@@ -70,15 +70,6 @@ export class ExolixProvider implements TokenProvider {
         ),
       );
 
-      //     data: {
-      //   fromAmount: 7000,
-      //   toAmount: 621.447083,
-      //   rate: 0.08877815,
-      //   message: null,
-      //   minAmount: 545.05005562,
-      //   withdrawMin: 0.175665991137243,
-      //   maxAmount: 19017.11307216
-      // }
       return {
         isError: false,
         isMessage: false,
@@ -91,13 +82,14 @@ export class ExolixProvider implements TokenProvider {
       };
     } catch (error) {
       // ['message', 'name', 'code', 'config', 'request', 'response', 'status'];
-      console.log(error.response.data);
+      console.log('ERROR RES:', error.response.data);
+
       if (error.response.data.error) {
         return {
           isError: true,
           isMessage: true,
-          minAmount: 0,
-          maxAmount: 0,
+          minAmount: error.response.data.minAmount,
+          maxAmount: error.response.data.maxAmount,
           fromAmount: getQuoteData.amount,
           toAmount: 0,
           rate: 0,
@@ -107,9 +99,9 @@ export class ExolixProvider implements TokenProvider {
         return {
           isError: true,
           isMessage: true,
-          minAmount: 0,
-          maxAmount: 0,
           fromAmount: getQuoteData.amount,
+          minAmount: error.response.data.minAmount,
+          maxAmount: error.response.data.maxAmount,
           toAmount: 0,
           rate: 0,
           message: error.response.data.message ?? '',

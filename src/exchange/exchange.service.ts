@@ -36,12 +36,16 @@ export class ExchangeService {
   // Calculates the exchnage rates
   async getExchangeRate(request: ExchangeRequest): Promise<ExchangeResponse> {
     // ValidateCurrencies and get Rates
-    this.validateCurrencies(
+    const currencyValidated = await this.validateCurrencies(
       request.from_currency,
       request.to_currency,
       request.from_network,
       request.to_network,
     );
+
+    if (currencyValidated?.error) {
+      throw new BadRequestException(currencyValidated.message);
+    }
 
     // Get the provider quotes
     const providerQuotes = await this.getProviderQuotes(
@@ -55,8 +59,6 @@ export class ExchangeService {
     if (providerQuotes.isError) {
       throw new BadRequestException(providerQuotes.error);
     }
-
-    // const bestQuote = await this.getBestQuote();
 
     return {
       uid: this.generateUid(),
@@ -74,6 +76,7 @@ export class ExchangeService {
       updated_at: new Date().toISOString(),
       quotes: providerQuotes.quotes,
       uuid_request: request.uuid_request,
+      errors: providerQuotes.error,
     };
   }
 
@@ -83,7 +86,10 @@ export class ExchangeService {
     toCurrency: string,
     fromNetwork: string,
     toNetwork: string,
-  ): Promise<void> {
+  ): Promise<{
+    error: boolean;
+    message: string;
+  }> {
     // Checks if currencies exists on specified networks
 
     // Check if the from token exists
@@ -93,7 +99,10 @@ export class ExchangeService {
     const toTokenExists = this.getTokenFromTokens(toCurrency, toNetwork);
 
     if (!fromTokenExists || !toTokenExists) {
-      throw new Error('Invalid currency or network combination');
+      return {
+        error: true,
+        message: 'Invalid currency or network combination',
+      };
     }
   }
 
@@ -106,7 +115,7 @@ export class ExchangeService {
   ): Promise<{
     quotes: ExchangeQuote[];
     isError: boolean;
-    error: string;
+    error: Record<string, string>;
   }> {
     try {
       // Get the quote from different Providers
@@ -121,6 +130,8 @@ export class ExchangeService {
         throw new Error('Could not get the tokens');
       }
 
+      console.log({ fromToken, toToken });
+
       // Check the providers if ticker_ is not null
       const fromProviders = this.checkProviders(fromToken);
       const toProviders = this.checkProviders(toToken);
@@ -134,7 +145,7 @@ export class ExchangeService {
 
       // Get common providers
       const commonProviders = this.getCommonProviders(fromToken, toToken);
-      // console.log({ commonProviders });
+      console.log({ commonProviders });
 
       if (commonProviders.length === 0)
         throw new Error('No Common providers found');
@@ -147,6 +158,9 @@ export class ExchangeService {
       const toPriceInUsdt = await this.coingeckoProvider.getTokenPriceInUSD(
         toToken.coingecko_id,
       );
+
+      console.log({ fromPriceInUsdt, toPriceInUsdt });
+      const errorObj: Record<string, string> = {};
 
       // let toAmount: number = 1;
       // Get the quote for the providers
@@ -186,7 +200,8 @@ export class ExchangeService {
                 `Error fetching quote from ${providerName}:`,
                 providerResponse.message,
               );
-              return null;
+              errorObj[providerName] = providerResponse.message;
+              // return null;
             }
 
             console.log({
@@ -219,7 +234,7 @@ export class ExchangeService {
       return {
         isError: false,
         quotes: filteredQuotes,
-        error: '',
+        error: errorObj, // {provider, error}
       };
     } catch (error) {
       return {
@@ -247,6 +262,7 @@ export class ExchangeService {
     const estimatedAmountFromUsdt = estimatedAmountFrom * fromPriceInUsdt;
 
     console.log({
+      providerResponse,
       estimatedAmountFrom,
       estimatedAmountFromUsdt,
       estimatedAmountTo,
@@ -263,6 +279,8 @@ export class ExchangeService {
       estimated_amount_from_usdt: estimatedAmountFromUsdt.toString(),
       exchange_rate: exchangeRate.toString(),
       created_at: new Date().toISOString(),
+      minAmount: providerResponse.minAmount.toString(),
+      maxAmount: providerResponse.maxAmount.toString(),
     };
   }
 

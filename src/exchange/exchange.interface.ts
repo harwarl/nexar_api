@@ -20,6 +20,8 @@ export interface ExchangeQuote {
   exchange_rate: string;
   fee?: string;
   created_at: string;
+  minAmount: string;
+  maxAmount: string;
 }
 
 export interface ErrorMessage {
@@ -43,6 +45,7 @@ export interface ExchangeResponse {
   updated_at: string;
   quotes: ExchangeQuote[];
   uuid_request: string;
+  errors: Record<string, string>;
 }
 
 export interface ProviderQuote {

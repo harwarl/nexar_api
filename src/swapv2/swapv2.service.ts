@@ -11,7 +11,6 @@ export class Swapv2Service {
     private readonly exchangeService: ExchangeService,
   ) {}
 
-  // TODO: Paginate this, let there be the next, previous
   async getTokens(getTokensQuery: GetTokensQueryDto) {
     return this.tokenService.getTokens(getTokensQuery);
   }

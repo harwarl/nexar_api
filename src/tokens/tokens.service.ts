@@ -50,8 +50,6 @@ export class TokensService implements OnModuleInit {
     const allTokens = this.processProviderResults(providerResults);
     const aggregatedTokens = this.aggregateTokens(allTokens);
     this.allTokens = this.formatTokenResponse(aggregatedTokens);
-
-    // return { results: formattedResponse };
     this.lastUpdated = new Date();
   }
 
@@ -188,7 +186,7 @@ export class TokensService implements OnModuleInit {
         continue;
       }
 
-      const key = `${token.symbol}_${network.slug}`;
+      const key = `${token.symbol.toUpperCase()}_${network.slug.toUpperCase()}`;
 
       if (!tokenMap.has(key)) {
         tokenMap.set(key, {
@@ -243,7 +241,7 @@ export class TokensService implements OnModuleInit {
         id: this.tokenCounter++,
         token_network: { ...network },
         url_icon: tokenData.iconUrl || null,
-        code: tokenData.code,
+        code: tokenData.code.toUpperCase(),
         code_name: `${tokenData.name} (${network.name})`,
         network_name: network.name,
         is_active: true,
@@ -283,6 +281,7 @@ export class TokensService implements OnModuleInit {
         }
       }
 
+      console.log({ response });
       responses.push(response);
     }
 

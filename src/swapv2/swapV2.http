@@ -1,4 +1,4 @@
-GET http://localhost:4040/api/v2/swap/tokens?page=7
+GET http://localhost:4040/api/v2/swap/tokens?page=8
 Content-Type: application/json
 Accept: application/json
 x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
@@ -17,19 +17,19 @@ x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3Z
 
 {
      "direction": "SEND",
-     "from_amount": "600",
-     "from_currency": "AI16Z",
-     "from_network": "SOL",
-     "to_currency": "AI16Z",
-     "to_network": "SOL",
+     "from_amount": "1",
+     "from_currency": "ETH",
+     "from_network": "ETH",
+     "to_currency": "bitcoin",
+     "to_network": "BTC",
      "uuid_request": "ee43aee4-0176-400e-a8c9-ecad9ddc658b"
 }
 
-# ###   Partners gets Exolix
-# GET https://exolix.com/api/v2/currencies?withNetworks=true&page=1&size=100
-# Content-Type: application/json
-# Accept: application/json
-# Authorization: 
+###   Partners gets Exolix
+GET https://exolix.com/api/v2/currencies?withNetworks=true&page=1&size=100
+Content-Type: application/json
+Accept: application/json
+Authorization: 
 
 # ### Fixed Float
 # POST https://ff.io/api/v2/ccies
@@ -49,7 +49,7 @@ x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3Z
 # Content-Type: application/json
 # Accept: application/json
 
-# ###
-# GET https://api.changenow.io/v1/currencies?active=true&fixedRate=true
-# Content-Type: application/json
-# Accept: application/json 
+###
+GET https://api.changenow.io/v1/currencies?active=true&fixedRate=true
+Content-Type: application/json
+Accept: application/json 

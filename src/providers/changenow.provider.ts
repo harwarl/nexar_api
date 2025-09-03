@@ -7,7 +7,6 @@ import {
 } from './provider.interface';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import { symbol } from 'joi';
 import { PROVIDERS } from 'utils/constants';
 import { ConfigService } from '@nestjs/config';
 import { AFFILIATE_DATA } from './provider.data';
@@ -41,8 +40,7 @@ export class ChangeNowProvider implements TokenProvider {
         ),
       );
 
-      const changeNowData = this.transformResponse(data);
-      return changeNowData;
+      return this.transformResponse(data);
     } catch (error) {
       throw new Error(`Failed to fetch ${this.name} tokens: ${error.message}`);
     }
