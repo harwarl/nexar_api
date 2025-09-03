@@ -1,13 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import {
-  fetchQuoteResponse,
+  FetchQuoteResponse,
   ProviderToken,
   QuoteData,
   TokenProvider,
 } from './provider.interface';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import { symbol } from 'joi';
 import { ConfigService } from '@nestjs/config';
 import { AFFILIATE_DATA } from './provider.data';
 
@@ -15,10 +14,7 @@ import { AFFILIATE_DATA } from './provider.data';
 export class ExolixProvider implements TokenProvider {
   readonly name = 'exolix';
 
-  constructor(
-    private readonly httpService: HttpService,
-    private readonly configService: ConfigService,
-  ) {}
+  constructor(private readonly httpService: HttpService) {}
 
   async fetchSupportedTokens(): Promise<ProviderToken[]> {
     try {
@@ -59,7 +55,7 @@ export class ExolixProvider implements TokenProvider {
     }
   }
 
-  async fetchQuote(getQuoteData: QuoteData): Promise<fetchQuoteResponse> {
+  async fetchQuote(getQuoteData: QuoteData): Promise<FetchQuoteResponse> {
     console.log(
       `${AFFILIATE_DATA.EXOLIX.baseUrl}${AFFILIATE_DATA.EXOLIX.endpoints.getRate}`,
     );

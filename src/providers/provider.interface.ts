@@ -32,7 +32,7 @@ export interface QuoteData {
   toNetwork?: string;
 }
 
-export interface fetchQuoteResponse {
+export interface FetchQuoteResponse {
   isError: boolean;
   isMessage: boolean;
   minAmount?: number;

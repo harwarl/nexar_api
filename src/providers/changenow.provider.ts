@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { ProviderToken, QuoteData, TokenProvider } from './provider.interface';
+import {
+  FetchQuoteResponse,
+  ProviderToken,
+  QuoteData,
+  TokenProvider,
+} from './provider.interface';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { symbol } from 'joi';
@@ -43,19 +48,46 @@ export class ChangeNowProvider implements TokenProvider {
     }
   }
 
-  async fetchQuote(getQuoteData: QuoteData): Promise<any> {
+  async fetchQuote(getQuoteData: QuoteData): Promise<FetchQuoteResponse> {
     try {
-      const { data } = await firstValueFrom(
+      // First get the minAmount
+      const {
+        data: { minAmount, maxAmount },
+      } = await firstValueFrom(
+        this.httpService.get(
+          `${this.configService.get(AFFILIATE_DATA.CHANGENOW.baseUrl)}/exchange-range/${getQuoteData.fromCurrency}_${getQuoteData.toCurrency}?api_key=${this.configService.get<string>(AFFILIATE_DATA.CHANGENOW.apiKey)}`,
+        ),
+      );
+
+      const { data: estimatedData } = await firstValueFrom(
         this.httpService.get(
           `${this.configService.get(AFFILIATE_DATA.CHANGENOW.baseUrl)}/min-amount/${getQuoteData.fromCurrency}_${getQuoteData.toCurrency}?api_key=${this.configService.get<string>(AFFILIATE_DATA.CHANGENOW.apiKey)}`,
         ),
       );
 
-      console.log({ changeNowDataEstimated: data });
-
-      return data;
+      return {
+        isError: false,
+        isMessage: false,
+        minAmount: minAmount,
+        maxAmount: maxAmount,
+        fromAmount: getQuoteData.amount,
+        toAmount: estimatedData.estimatedAmount,
+        rate: 0,
+        message: estimatedData.warningMessage,
+      };
     } catch (error) {
-      throw new Error(`Failed to get the rate for ${this.name}`);
+      if (error.response.data.error) {
+        return {
+          isError: true,
+          isMessage: true,
+          minAmount: 0,
+          maxAmount: 0,
+          fromAmount: getQuoteData.amount,
+          toAmount: 0,
+          rate: 0,
+          message: error.response.data.message ?? '',
+        };
+      }
     }
   }
 
