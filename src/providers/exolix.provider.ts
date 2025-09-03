@@ -56,9 +56,6 @@ export class ExolixProvider implements TokenProvider {
   }
 
   async fetchQuote(getQuoteData: QuoteData): Promise<FetchQuoteResponse> {
-    console.log(
-      `${AFFILIATE_DATA.EXOLIX.baseUrl}${AFFILIATE_DATA.EXOLIX.endpoints.getRate}`,
-    );
     try {
       const { data } = await firstValueFrom(
         this.httpService.get(
@@ -94,6 +91,7 @@ export class ExolixProvider implements TokenProvider {
       };
     } catch (error) {
       // ['message', 'name', 'code', 'config', 'request', 'response', 'status'];
+      console.log(error.response.data);
       if (error.response.data.error) {
         return {
           isError: true,
@@ -103,18 +101,18 @@ export class ExolixProvider implements TokenProvider {
           fromAmount: getQuoteData.amount,
           toAmount: 0,
           rate: 0,
-          message: error.response.data.message ?? '',
+          message: error.response.data.error ?? '',
         };
       } else {
         return {
           isError: true,
-          isMessage: false,
+          isMessage: true,
           minAmount: 0,
           maxAmount: 0,
           fromAmount: getQuoteData.amount,
           toAmount: 0,
           rate: 0,
-          message: error.response.data.error ?? '',
+          message: error.response.data.message ?? '',
         };
       }
     }

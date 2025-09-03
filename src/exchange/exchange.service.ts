@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { CoingeckoProvider } from 'src/providers/coingecko.provider';
 import { TokensService } from 'src/tokens/tokens.service';
 import {
+  ErrorMessage,
   ExchangeQuote,
   ExchangeRequest,
   ExchangeResponse,
@@ -11,6 +12,7 @@ import { TokenResponse } from 'src/tokens/tokens.interface';
 import { AFFILIATES } from 'src/providers/provider.data';
 import { ChangeNowProvider } from 'src/providers/changeNow.provider';
 import { ExolixProvider } from 'src/providers/exolix.provider';
+import { FetchQuoteResponse } from 'src/providers/provider.interface';
 
 export interface ProviderSupport {
   provider: string;
@@ -50,6 +52,10 @@ export class ExchangeService {
       Number(request.from_amount),
     );
 
+    if (providerQuotes.isError) {
+      throw new BadRequestException(providerQuotes.error);
+    }
+
     // const bestQuote = await this.getBestQuote();
 
     return {
@@ -66,7 +72,7 @@ export class ExchangeService {
       status: 'PENDING',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      quotes: providerQuotes,
+      quotes: providerQuotes.quotes,
       uuid_request: request.uuid_request,
     };
   }
@@ -97,145 +103,156 @@ export class ExchangeService {
     fromNetwork: string,
     toNetwork: string,
     fromAmount: number,
-    // fromPriceInUsdt: number,
-    // toPriceInUsdt: number,
-  ): Promise<ExchangeQuote[]> {
-    // Get the quote from different Providers
-    // Get the quote from the providers with Ticker_{providerName} != null
-    const fromToken = this.getTokenFromTokens(fromCurrency, fromNetwork);
-    if (!fromToken) {
-      throw new Error('Could not get the tokens');
-    }
+  ): Promise<{
+    quotes: ExchangeQuote[];
+    isError: boolean;
+    error: string;
+  }> {
+    try {
+      // Get the quote from different Providers
+      // Get the quote from the providers with Ticker_{providerName} != null
+      const fromToken = this.getTokenFromTokens(fromCurrency, fromNetwork);
+      if (!fromToken) {
+        throw new Error('Could not get the tokens');
+      }
 
-    const toToken = this.getTokenFromTokens(toCurrency, toNetwork);
-    if (!toToken) {
-      throw new Error('Could not get the tokens');
-    }
+      const toToken = this.getTokenFromTokens(toCurrency, toNetwork);
+      if (!toToken) {
+        throw new Error('Could not get the tokens');
+      }
 
-    // Check the providers if ticker_ is not null
-    const fromProviders = this.checkProviders(fromToken);
-    const toProviders = this.checkProviders(toToken);
+      // Check the providers if ticker_ is not null
+      const fromProviders = this.checkProviders(fromToken);
+      const toProviders = this.checkProviders(toToken);
 
-    console.log({ fromProviders, toProviders });
+      // console.log({ fromProviders, toProviders });
 
-    if (fromProviders.length === 0 || toProviders.length === 0)
-      throw new Error(
-        'No prorviders found for either the from or the to token',
+      if (fromProviders.length === 0 || toProviders.length === 0)
+        throw new Error(
+          'No prorviders found for either the from or the to token',
+        );
+
+      // Get common providers
+      const commonProviders = this.getCommonProviders(fromToken, toToken);
+      // console.log({ commonProviders });
+
+      if (commonProviders.length === 0)
+        throw new Error('No Common providers found');
+
+      console.log(fromToken.coingecko_id, toToken.coingecko_id);
+      const fromPriceInUsdt = await this.coingeckoProvider.getTokenPriceInUSD(
+        fromToken.coingecko_id,
       );
 
-    // Get common providers
-    const commonProviders = this.getCommonProviders(fromToken, toToken);
-    console.log({ commonProviders });
+      const toPriceInUsdt = await this.coingeckoProvider.getTokenPriceInUSD(
+        toToken.coingecko_id,
+      );
 
-    if (commonProviders.length === 0)
-      throw new Error('No Common providers found');
+      // let toAmount: number = 1;
+      // Get the quote for the providers
+      const quotePromises: any = commonProviders.map(
+        async (providerName: any) => {
+          try {
+            let providerResponse: FetchQuoteResponse;
 
-    console.log({ fromToken, toToken });
-    const fromPriceInUsdt = await this.coingeckoProvider.getTokenPriceInUSD(
-      fromToken.coingecko_id,
-    );
+            switch (providerName) {
+              case AFFILIATES.CHANGENOW:
+                // get the quote from change now provider
+                providerResponse = await this.changeNowProvider.fetchQuote({
+                  fromCurrency: fromToken.ticker_changenow,
+                  toCurrency: toToken.ticker_changenow,
+                  amount: fromAmount,
+                });
+                break;
 
-    const toPriceInUsdt = await this.coingeckoProvider.getTokenPriceInUSD(
-      toToken.coingecko_id,
-    );
+              // get the quote from exolix provider
+              case AFFILIATES.EXOLIX:
+                providerResponse = await this.exolixProvider.fetchQuote({
+                  fromCurrency: fromToken.ticker_exolix,
+                  fromNetwork: fromToken.network_name,
+                  toCurrency: toToken.ticker_exolix,
+                  toNetwork: toToken.network_name,
+                  amount: fromAmount,
+                });
+                break;
 
-    let toAmount: number = 1;
-    // Get the quote for the providers
-    const quotePromises = commonProviders.map(async (providerName: any) => {
-      try {
-        let providerResponse: any;
-
-        switch (providerName) {
-          case AFFILIATES.CHANGENOW:
-            // get the quote from change now provider
-            providerResponse = await this.changeNowProvider.fetchQuote({
-              fromCurrency: fromToken.ticker_changenow,
-              toCurrency: toToken.ticker_changenow,
-              amount: fromAmount,
-            });
-
-            // providerResponse.estimatedAmount
-            // if The estimated amount is greater than the already stated, update
-            if (providerResponse.estimatedAmount && !providerResponse.warning) {
-              toAmount = providerResponse.estimatedAmount;
+              // Add more quotes in here
+              default:
+                return null;
             }
 
-            break;
-
-          // get the quote from exolix provider
-          case AFFILIATES.EXOLIX:
-            providerResponse = await this.exolixProvider.fetchQuote({
-              fromCurrency: fromToken.ticker_exolix,
-              fromNetwork: fromToken.network_name,
-              toCurrency: toToken.ticker_exolix,
-              toNetwork: toToken.ticker_exolix,
-              amount: fromAmount,
-            });
-
-            // if The estimated amount is greater than the already stated, update
-            if (providerResponse.toAmount) {
-              toAmount = providerResponse.toAmount;
+            if (providerResponse.isError) {
+              console.error(
+                `Error fetching quote from ${providerName}:`,
+                providerResponse.message,
+              );
+              return null;
             }
 
-            break;
+            console.log({
+              fromPriceInUsdt,
+              toPriceInUsdt,
+              fromAmount,
+              toAmount: providerResponse.toAmount,
+            });
 
-          // Add more quotes in here
-
-          default:
+            return this.transformToStandardQuote(
+              providerResponse,
+              providerName,
+              Number(fromPriceInUsdt.priceInUsd) * Number(fromAmount),
+              Number(toPriceInUsdt.priceInUsd) *
+                Number(providerResponse.toAmount),
+            );
+          } catch (error) {
+            console.error(`Error fetching quote from ${providerName}:`, error);
             return null;
-        }
+          }
+        },
+      );
 
-        return this.transformToStandardQuote(
-          providerResponse,
-          providerName,
-          fromAmount,
-          Number(fromPriceInUsdt) * fromAmount,
-          Number(toPriceInUsdt),
-        );
-      } catch (error) {
-        console.error(`Error fetching quote from ${providerName}:`, error);
-        return null;
-      }
-    });
+      // Wait for all quotes and filter out failed ones
+      const quotes = await Promise.all(quotePromises);
+      const filteredQuotes = quotes.filter(
+        (quote): quote is ExchangeQuote => quote !== null,
+      );
 
-    // Wait for all quotes and filter out failed ones
-    const quotes = await Promise.all(quotePromises);
-    return quotes.filter((quote): quote is ExchangeQuote => quote !== null);
+      return {
+        isError: false,
+        quotes: filteredQuotes,
+        error: '',
+      };
+    } catch (error) {
+      return {
+        isError: true,
+        quotes: [],
+        error: error.message ?? 'Unknown error',
+      };
+    }
   }
 
   // Get's the provider Quote
   private async transformToStandardQuote(
-    providerResponse: any,
+    providerResponse: FetchQuoteResponse,
     providerName: string,
-    fromAmount: number,
     fromPriceInUsdt: number,
     toPriceInUsdt: number,
   ): Promise<ExchangeQuote> {
     // ToDO: use ProviderQuote Interface
-    let estimatedAmountTo: number;
-    let estimatedAmountFrom: number;
-    let exchangeRate: number;
-
-    switch (providerName) {
-      case AFFILIATES.CHANGENOW:
-        estimatedAmountTo = providerResponse.estimatedAmount;
-        estimatedAmountFrom = fromAmount;
-        exchangeRate = estimatedAmountTo / fromAmount;
-        break;
-
-      case AFFILIATES.EXOLIX:
-        estimatedAmountTo = providerResponse.toAmount;
-        estimatedAmountFrom = providerResponse.fromAmount;
-        exchangeRate = providerResponse.rate;
-        break;
-
-      default:
-        throw new Error(`Unsupported Provider ${providerName}`);
-    }
+    let estimatedAmountTo: number = providerResponse.toAmount;
+    let estimatedAmountFrom: number = providerResponse.fromAmount;
+    let exchangeRate: number = providerResponse.rate ?? 0;
 
     // Calculate USDT values
     const estimatedAmountToUsdt = estimatedAmountTo * toPriceInUsdt;
     const estimatedAmountFromUsdt = estimatedAmountFrom * fromPriceInUsdt;
+
+    console.log({
+      estimatedAmountFrom,
+      estimatedAmountFromUsdt,
+      estimatedAmountTo,
+      estimatedAmountToUsdt,
+      exchangeRate,
+    });
 
     return {
       uid: this.generateUid(),

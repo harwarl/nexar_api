@@ -72,7 +72,7 @@ export class ChangeNowProvider implements TokenProvider {
         maxAmount: maxAmount,
         fromAmount: getQuoteData.amount,
         toAmount: estimatedData.estimatedAmount,
-        rate: 0,
+        rate: estimatedData.estimatedAmount / getQuoteData.amount,
         message: estimatedData.warningMessage,
       };
     } catch (error) {

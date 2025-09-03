@@ -17,7 +17,7 @@ x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3Z
 
 {
      "direction": "SEND",
-     "from_amount": "0.2",
+     "from_amount": "600",
      "from_currency": "AI16Z",
      "from_network": "SOL",
      "to_currency": "AI16Z",

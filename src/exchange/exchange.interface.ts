@@ -22,6 +22,11 @@ export interface ExchangeQuote {
   created_at: string;
 }
 
+export interface ErrorMessage {
+  isError: boolean;
+  message: string;
+}
+
 export interface ExchangeResponse {
   uid: string;
   from_currency: string;
