@@ -152,7 +152,11 @@ export class ExchangeService {
       if (commonProviders.length === 0)
         throw new Error('No Common providers found');
 
-      console.log(fromToken.coingecko_id, toToken.coingecko_id);
+      console.log({
+        fromToken: fromToken.coingecko_id,
+        toToken: toToken.coingecko_id,
+      });
+
       const fromPriceInUsdt = await this.coingeckoProvider.getTokenPriceInUSD(
         fromToken.coingecko_id,
       );
@@ -254,7 +258,6 @@ export class ExchangeService {
     fromPriceInUsdt: number,
     toPriceInUsdt: number,
   ): Promise<ExchangeQuote> {
-    // ToDO: use ProviderQuote Interface
     let estimatedAmountTo: number = providerResponse.toAmount;
     let estimatedAmountFrom: number = providerResponse.fromAmount;
     let exchangeRate: number = providerResponse.rate ?? 0;
@@ -262,15 +265,6 @@ export class ExchangeService {
     // Calculate USDT values
     const estimatedAmountToUsdt = estimatedAmountTo * toPriceInUsdt;
     const estimatedAmountFromUsdt = estimatedAmountFrom * fromPriceInUsdt;
-
-    console.log({
-      providerResponse,
-      estimatedAmountFrom,
-      estimatedAmountFromUsdt,
-      estimatedAmountTo,
-      estimatedAmountToUsdt,
-      exchangeRate,
-    });
 
     return {
       uid: this.generateUid(),
@@ -282,7 +276,10 @@ export class ExchangeService {
       exchange_rate: exchangeRate.toString(),
       created_at: new Date().toISOString(),
       minAmount: providerResponse.minAmount.toString(),
-      maxAmount: providerResponse.maxAmount.toString(),
+      maxAmount:
+        providerResponse.maxAmount !== null
+          ? providerResponse.maxAmount.toString()
+          : '0',
     };
   }
 

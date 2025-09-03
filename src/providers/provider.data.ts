@@ -24,7 +24,7 @@ export const AFFILIATE_DATA = {
   CHANGENOW: {
     name: AFFILIATES.CHANGENOW,
     baseUrl: process.env.CHANGENOW_URL, // e.g., 'https://api.changenow.io/v1/'
-    apiKey: process.env.CHANGENOW_API_KEY || '',
+    apiKey: process.env.CHANGE_NOW_API_KEY || '',
     endpoints: {
       tokens: 'currencies?active=true&fixedRate=true',
       getTransactions: 'exchanges', // query: from, to, amount, fromNetwork, toNetwork

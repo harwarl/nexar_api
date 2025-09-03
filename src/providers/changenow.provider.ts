@@ -53,13 +53,13 @@ export class ChangeNowProvider implements TokenProvider {
         data: { minAmount, maxAmount },
       } = await firstValueFrom(
         this.httpService.get(
-          `${this.configService.get(AFFILIATE_DATA.CHANGENOW.baseUrl)}/exchange-range/${getQuoteData.fromCurrency}_${getQuoteData.toCurrency}?api_key=${this.configService.get<string>(AFFILIATE_DATA.CHANGENOW.apiKey)}`,
+          `${AFFILIATE_DATA.CHANGENOW.baseUrl}exchange-range/${getQuoteData.fromCurrency}_${getQuoteData.toCurrency}?api_key=${AFFILIATE_DATA.CHANGENOW.apiKey}`,
         ),
       );
 
       const { data: estimatedData } = await firstValueFrom(
         this.httpService.get(
-          `${this.configService.get(AFFILIATE_DATA.CHANGENOW.baseUrl)}/min-amount/${getQuoteData.fromCurrency}_${getQuoteData.toCurrency}?api_key=${this.configService.get<string>(AFFILIATE_DATA.CHANGENOW.apiKey)}`,
+          `${AFFILIATE_DATA.CHANGENOW.baseUrl}exchange-amount/${getQuoteData.amount}/${getQuoteData.fromCurrency}_${getQuoteData.toCurrency}?api_key=${AFFILIATE_DATA.CHANGENOW.apiKey}`,
         ),
       );
 
@@ -74,6 +74,7 @@ export class ChangeNowProvider implements TokenProvider {
         message: estimatedData.warningMessage,
       };
     } catch (error) {
+      console.log({ error });
       if (error.response.data.error) {
         return {
           isError: true,

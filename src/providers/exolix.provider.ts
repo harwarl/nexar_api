@@ -7,8 +7,8 @@ import {
 } from './provider.interface';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import { ConfigService } from '@nestjs/config';
 import { AFFILIATE_DATA } from './provider.data';
+import { getQuote } from '@across-protocol/app-sdk';
 
 @Injectable()
 export class ExolixProvider implements TokenProvider {
@@ -59,7 +59,7 @@ export class ExolixProvider implements TokenProvider {
     try {
       const { data } = await firstValueFrom(
         this.httpService.get(
-          `${AFFILIATE_DATA.EXOLIX.baseUrl}${AFFILIATE_DATA.EXOLIX.endpoints.getRate}?coinFrom=${getQuoteData.fromCurrency}&networkFrom=${getQuoteData.fromNetwork}&coinTo=${'USDT'}&networkTo=${'ETH'}&amount=${getQuoteData.amount}&rateType=fixed`,
+          `${AFFILIATE_DATA.EXOLIX.baseUrl}${AFFILIATE_DATA.EXOLIX.endpoints.getRate}?coinFrom=${getQuoteData.fromCurrency}&networkFrom=${getQuoteData.fromNetwork}&coinTo=${getQuoteData.toCurrency}&networkTo=${getQuoteData.toNetwork}&amount=${getQuoteData.amount}&rateType=fixed`,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -69,6 +69,8 @@ export class ExolixProvider implements TokenProvider {
           },
         ),
       );
+
+      console.log({ data });
 
       return {
         isError: false,
