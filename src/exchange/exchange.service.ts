@@ -98,6 +98,8 @@ export class ExchangeService {
     // Check if the to token exists
     const toTokenExists = this.getTokenFromTokens(toCurrency, toNetwork);
 
+    console.log({ fromTokenExists, toTokenExists });
+
     if (!fromTokenExists || !toTokenExists) {
       return {
         error: true,

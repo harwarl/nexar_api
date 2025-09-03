@@ -127,7 +127,6 @@ export class NetworkDiscoveryService {
 
   // Find Network by slug
   findNetworkBySlug(slug: string): Network | undefined {
-    console.log({ slug });
     return this.discoveredNetworks.get(slug);
   }
 

@@ -49,7 +49,10 @@ export class TokensService implements OnModuleInit {
 
     const allTokens = this.processProviderResults(providerResults);
     const aggregatedTokens = this.aggregateTokens(allTokens);
-    this.allTokens = this.formatTokenResponse(aggregatedTokens);
+    const formattedTokens = this.formatTokenResponse(aggregatedTokens);
+    this.allTokens = this.filterTokensWithProvider(formattedTokens);
+
+    // Remove tokens without provider backing
     this.lastUpdated = new Date();
   }
 
@@ -281,10 +284,29 @@ export class TokensService implements OnModuleInit {
         }
       }
 
-      console.log({ response });
       responses.push(response);
     }
 
     return responses;
+  }
+
+  filterTokensWithProvider(tokens: any[]): TokenResponse[] {
+    const providerKeys = [
+      'ticker_fixedfloat',
+      'ticker_changehero',
+      'ticker_changenow',
+      'ticker_sideshift',
+      'ticker_simpleswap',
+      'ticker_swapuz',
+      'ticker_thechange',
+      'ticker_exolix',
+      'ticker_swaponix',
+      'ticker_nanswap',
+      'ticker_changelly',
+    ];
+
+    return tokens.filter((token) =>
+      providerKeys.some((key) => token[key] !== null),
+    );
   }
 }
