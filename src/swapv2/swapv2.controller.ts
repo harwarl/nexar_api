@@ -20,13 +20,8 @@ export class Swapv2Controller {
     return this.swapv2Service.swapRequest(swapRequestDto);
   }
 
-  // Get the minimal Amount
-  // This is needed to get the minial Amount for the transfer
-  async getMinimalAmount() {}
-
-  // Get the Exchange Amounts for all Exchanges
-  async getExchangeAmount() {}
-
+  @Post('swap_offers')
+  async postSwapOffers(@Body() swapOffersDto: GetSwapRequestDto) {}
   // Get the transaction Id
   async getTransaction() {}
 

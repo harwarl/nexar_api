@@ -79,8 +79,8 @@ export class ExchangeService {
       status: 'PENDING',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      // quotes: providerQuotes.quotes,
-      quotes: [bestQuote],
+      quotes: providerQuotes.quotes,
+      bestQuote,
       uuid_request: request.uuid_request,
       errors: providerQuotes.error,
     };

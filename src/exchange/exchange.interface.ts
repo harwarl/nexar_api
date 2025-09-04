@@ -44,6 +44,7 @@ export interface ExchangeResponse {
   created_at: string;
   updated_at: string;
   quotes: ExchangeQuote[];
+  bestQuote: ExchangeQuote;
   uuid_request: string;
   errors: Record<string, string>;
 }
