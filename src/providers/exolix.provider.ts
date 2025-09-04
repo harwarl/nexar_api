@@ -70,8 +70,6 @@ export class ExolixProvider implements TokenProvider {
         ),
       );
 
-      console.log({ data });
-
       return {
         isError: false,
         isMessage: false,
@@ -83,9 +81,6 @@ export class ExolixProvider implements TokenProvider {
         message: data.message ?? '',
       };
     } catch (error) {
-      // ['message', 'name', 'code', 'config', 'request', 'response', 'status'];
-      console.log('ERROR RES:', error.response.data);
-
       if (error.response.data.error) {
         return {
           isError: true,

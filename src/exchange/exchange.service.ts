@@ -2,11 +2,9 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { CoingeckoProvider } from 'src/providers/coingecko.provider';
 import { TokensService } from 'src/tokens/tokens.service';
 import {
-  ErrorMessage,
   ExchangeQuote,
   ExchangeRequest,
   ExchangeResponse,
-  ProviderQuote,
 } from './exchange.interface';
 import { TokenResponse } from 'src/tokens/tokens.interface';
 import { AFFILIATES } from 'src/providers/provider.data';
@@ -60,6 +58,13 @@ export class ExchangeService {
       throw new BadRequestException(providerQuotes.error);
     }
 
+    // find the best quote
+    const bestQuote: ExchangeQuote = this.findBestQuote(providerQuotes.quotes);
+
+    if (!bestQuote) {
+      throw new BadRequestException('No quotes found');
+    }
+
     return {
       uid: this.generateUid(),
       from_currency: request.from_currency,
@@ -67,9 +72,9 @@ export class ExchangeService {
       from_network: request.from_network,
       to_network: request.to_network,
       from_amount: request.from_amount,
-      to_amount: '',
-      from_amount_usdt: ',',
-      to_amount_usdt: ',',
+      to_amount: bestQuote.estimated_amount_to,
+      from_amount_usdt: bestQuote.estimated_amount_from_usdt,
+      to_amount_usdt: bestQuote.estimated_amount_to_usdt,
       direction: 'SEND',
       status: 'PENDING',
       created_at: new Date().toISOString(),
@@ -210,12 +215,12 @@ export class ExchangeService {
               // return null;
             }
 
-            console.log({
-              fromPriceInUsdt,
-              toPriceInUsdt,
-              fromAmount,
-              toAmount: providerResponse.toAmount,
-            });
+            // console.log({
+            //   fromPriceInUsdt,
+            //   toPriceInUsdt,
+            //   fromAmount,
+            //   toAmount: providerResponse.toAmount,
+            // });
 
             return this.transformToStandardQuote(
               providerResponse,
@@ -301,6 +306,30 @@ export class ExchangeService {
         isSupported: ticker !== null && ticker !== '',
         ticker: ticker,
       };
+    });
+  }
+
+  // Finds the best quote
+  private findBestQuote(quotes: ExchangeQuote[]) {
+    if (!quotes || quotes.length === 0) return null;
+
+    return quotes.reduce((best, current): ExchangeQuote => {
+      if (
+        Number(current.estimated_amount_to_usdt) >
+        Number(best.estimated_amount_to_usdt)
+      ) {
+        return current;
+      }
+
+      if (
+        Number(current.estimated_amount_to_usdt) ===
+          Number(best.estimated_amount_to_usdt) &&
+        Number(current.estimated_amount_to) > Number(best.estimated_amount_to)
+      ) {
+        return current;
+      }
+
+      return best;
     });
   }
 
