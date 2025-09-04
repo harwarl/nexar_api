@@ -79,7 +79,8 @@ export class ExchangeService {
       status: 'PENDING',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      quotes: providerQuotes.quotes,
+      // quotes: providerQuotes.quotes,
+      quotes: [bestQuote],
       uuid_request: request.uuid_request,
       errors: providerQuotes.error,
     };
@@ -260,16 +261,16 @@ export class ExchangeService {
   private async transformToStandardQuote(
     providerResponse: FetchQuoteResponse,
     providerName: string,
-    fromPriceInUsdt: number,
-    toPriceInUsdt: number,
+    estimatedAmountFromUsdt: number,
+    estimatedAmountToUsdt: number,
   ): Promise<ExchangeQuote> {
     let estimatedAmountTo: number = providerResponse.toAmount;
     let estimatedAmountFrom: number = providerResponse.fromAmount;
     let exchangeRate: number = providerResponse.rate ?? 0;
 
-    // Calculate USDT values
-    const estimatedAmountToUsdt = estimatedAmountTo * toPriceInUsdt;
-    const estimatedAmountFromUsdt = estimatedAmountFrom * fromPriceInUsdt;
+    // // Calculate USDT values
+    // const estimatedAmountToUsdt = estimatedAmountTo * toPriceInUsdt;
+    // const estimatedAmountFromUsdt = estimatedAmountFrom * fromPriceInUsdt;
 
     return {
       uid: this.generateUid(),
