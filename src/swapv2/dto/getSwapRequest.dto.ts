@@ -1,4 +1,4 @@
-import { IsNumber, IsString } from 'class-validator';
+import { IsBoolean, IsNumber, IsString } from 'class-validator';
 
 export class GetSwapRequestDto {
   @IsString()
@@ -21,4 +21,7 @@ export class GetSwapRequestDto {
 
   @IsString()
   uuid_request: string;
+
+  @IsBoolean()
+  init: boolean;
 }

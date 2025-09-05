@@ -3,6 +3,7 @@ import { GetTokensQueryDto } from './dto/getTokensQuery.dto';
 import { GetSwapRequestDto } from './dto/getSwapRequest.dto';
 import { TokensService } from 'src/tokens/tokens.service';
 import { ExchangeService } from 'src/exchange/exchange.service';
+import { StartSwapDto } from './dto/startSwap.dto';
 
 @Injectable()
 export class Swapv2Service {
@@ -17,5 +18,9 @@ export class Swapv2Service {
 
   async swapRequest(getSwapRequest: GetSwapRequestDto) {
     return this.exchangeService.getExchangeRate(getSwapRequest);
+  }
+
+  async startSwap(startSwapDto: StartSwapDto) {
+    return this.exchangeService.startSwap(startSwapDto);
   }
 }

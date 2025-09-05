@@ -2,6 +2,7 @@ import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { Swapv2Service } from './swapv2.service';
 import { GetTokensQueryDto } from './dto/getTokensQuery.dto';
 import { GetSwapRequestDto } from './dto/getSwapRequest.dto';
+import { StartSwapDto } from './dto/startSwap.dto';
 
 @Controller({ path: 'swap', version: '2' })
 export class Swapv2Controller {
@@ -20,11 +21,9 @@ export class Swapv2Controller {
     return this.swapv2Service.swapRequest(swapRequestDto);
   }
 
-  @Post('swap_offers')
-  async postSwapOffers(@Body() swapOffersDto: GetSwapRequestDto) {}
-  // Get the transaction Id
-  async getTransaction() {}
-
-  // Create transaction
-  async postCreateTransaction() {}
+  // This endpoint is to start the swap
+  @Post('start_swap')
+  async startSwap(@Body() startSwapDto: StartSwapDto) {
+    return this.swapv2Service.startSwap(startSwapDto);
+  }
 }

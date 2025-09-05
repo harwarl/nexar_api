@@ -17,12 +17,13 @@ x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3Z
 
 {
      "direction": "SEND",
-     "from_amount": "1",
+     "from_amount": "0.015",
      "from_currency": "ETH",
      "from_network": "ETH",
-     "to_currency": "BTC",
-     "to_network": "BTC",
-     "uuid_request": "ee43aee4-0176-400e-a8c9-ecad9ddc658b"
+     "to_currency": "FUSD",
+     "init": false, 
+     "to_network": "ZANO",
+     "uuid_request": "yh43aee4-0076-400e-a8c9-erad90dc6545"
 }
 
 ###   Partners gets Exolix

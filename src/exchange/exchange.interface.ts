@@ -7,7 +7,8 @@ export interface ExchangeRequest {
   to_network: string;
   from_amount: string;
   direction: string;
-  uuid_request?: string;
+  uuid_request: string;
+  init: boolean;
 }
 
 export interface ExchangeQuote {
@@ -24,12 +25,16 @@ export interface ExchangeQuote {
   maxAmount: string;
 }
 
+export interface ExchangeQuoteWithTxId extends ExchangeQuote {
+  tx_id: string;
+}
+
 export interface ErrorMessage {
   isError: boolean;
   message: string;
 }
 
-export interface ExchangeResponse {
+export interface ExchangeResponseInit {
   uid: string;
   from_currency: string;
   to_currency: string;
@@ -43,10 +48,17 @@ export interface ExchangeResponse {
   status: string;
   created_at: string;
   updated_at: string;
-  quotes: ExchangeQuote[];
+  quotes: ExchangeQuote[] | ExchangeQuoteWithTxId;
   bestQuote: ExchangeQuote;
   uuid_request: string;
   errors: Record<string, string>;
+}
+
+export interface ExchangeResponse extends ExchangeResponseInit {
+  verified_txn?: boolean; // Needed to clean exchange requests
+  recipient_address?: string | null;
+  selected_provider?: string | null;
+  selected_quote_uid?: string | null;
 }
 
 export interface ProviderQuote {

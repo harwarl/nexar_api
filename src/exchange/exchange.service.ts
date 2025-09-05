@@ -5,12 +5,14 @@ import {
   ExchangeQuote,
   ExchangeRequest,
   ExchangeResponse,
+  ExchangeResponseInit,
 } from './exchange.interface';
 import { TokenResponse } from 'src/tokens/tokens.interface';
 import { AFFILIATES } from 'src/providers/provider.data';
 import { ChangeNowProvider } from 'src/providers/changeNow.provider';
 import { ExolixProvider } from 'src/providers/exolix.provider';
 import { FetchQuoteResponse } from 'src/providers/provider.interface';
+import { StartSwapDto } from 'src/swapv2/dto/startSwap.dto';
 
 export interface ProviderSupport {
   provider: string;
@@ -31,8 +33,79 @@ export class ExchangeService {
     private readonly changeNowProvider: ChangeNowProvider,
   ) {}
 
+  // Start swap
+  async startSwap(startSwap: StartSwapDto) {
+    // Check for uuid_request, recipient_address, selected_provider, selected_quote_uid
+    if (
+      !startSwap.uuid_request ||
+      !startSwap.recipient_address ||
+      !startSwap.selected_provider ||
+      !startSwap.selected_quote_uid
+    ) {
+      throw new BadRequestException('Missing required fields');
+    }
+
+    // check if the exchange request exists
+    const exchangeRequest = this.exchangeRequests.get(startSwap.uuid_request);
+
+    if (!exchangeRequest) {
+      throw new BadRequestException(
+        `Could not found the exchange with uuid ${startSwap.uuid_request}`,
+      );
+    }
+
+    // Update the exchange request
+    const updatedExchangeRequest: ExchangeResponse = {
+      ...exchangeRequest,
+      recipient_address: startSwap.recipient_address,
+      selected_provider: startSwap.selected_provider,
+      selected_quote_uid: startSwap.selected_quote_uid,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Update the exchange request in the map
+    this.exchangeRequests.set(startSwap.uuid_request, updatedExchangeRequest);
+
+    // Save the exchange request to the database  in here
+
+    // Get the transaction Id from the provider in here
+
+    // Save the selected quote to the database in here with ExchnageQuoteWithTxId type
+
+    return updatedExchangeRequest;
+  }
+
   // Calculates the exchnage rates
-  async getExchangeRate(request: ExchangeRequest): Promise<ExchangeResponse> {
+  async getExchangeRate(
+    request: ExchangeRequest,
+  ): Promise<ExchangeResponse | ExchangeResponseInit> {
+    if (request.init === false) {
+      // Get the exchange response and pad with more information
+      // Get the data from the exchange requests
+      // Check if the exchange request already exists
+      const exchangeResponse = this.exchangeRequests.get(request.uuid_request);
+      if (!exchangeResponse) {
+        throw new BadRequestException(
+          `Could not found the exchange with uuid ${request.uuid_request}`,
+        );
+      }
+
+      return {
+        ...exchangeResponse,
+        from_amount_usdt: null,
+        to_amount_usdt: null,
+        updated_at: new Date().toISOString(),
+        recipient_address: null,
+        selected_provider: null,
+        selected_quote_uid: null,
+      };
+    }
+
+    // Check if the exchange request already exists
+    if (this.exchangeRequests.has(request.uuid_request)) {
+      return this.exchangeRequests.get(request.uuid_request);
+    }
+
     // ValidateCurrencies and get Rates
     const currencyValidated = await this.validateCurrencies(
       request.from_currency,
@@ -41,7 +114,7 @@ export class ExchangeService {
       request.to_network,
     );
 
-    if (currencyValidated?.error) {
+    if (currencyValidated?.error === true) {
       throw new BadRequestException(currencyValidated.message);
     }
 
@@ -65,7 +138,7 @@ export class ExchangeService {
       throw new BadRequestException('No quotes found');
     }
 
-    return {
+    const exchangeResponse = {
       uid: this.generateUid(),
       from_currency: request.from_currency,
       to_currency: request.to_currency,
@@ -84,6 +157,10 @@ export class ExchangeService {
       uuid_request: request.uuid_request,
       errors: providerQuotes.error,
     };
+
+    this.exchangeRequests.set(request.uuid_request, exchangeResponse);
+
+    return exchangeResponse;
   }
 
   // Validate the currencies in the exchange request
@@ -95,6 +172,8 @@ export class ExchangeService {
   ): Promise<{
     error: boolean;
     message: string;
+    fromTokenObj?: TokenResponse;
+    toTokenObj?: TokenResponse;
   }> {
     // Checks if currencies exists on specified networks
 
@@ -104,14 +183,19 @@ export class ExchangeService {
     // Check if the to token exists
     const toTokenExists = this.getTokenFromTokens(toCurrency, toNetwork);
 
-    console.log({ fromTokenExists, toTokenExists });
-
     if (!fromTokenExists || !toTokenExists) {
       return {
         error: true,
         message: 'Invalid currency or network combination',
       };
     }
+
+    return {
+      error: false,
+      message: '',
+      fromTokenObj: fromTokenExists,
+      toTokenObj: toTokenExists,
+    };
   }
 
   private async getProviderQuotes(
@@ -268,10 +352,6 @@ export class ExchangeService {
     let estimatedAmountFrom: number = providerResponse.fromAmount;
     let exchangeRate: number = providerResponse.rate ?? 0;
 
-    // // Calculate USDT values
-    // const estimatedAmountToUsdt = estimatedAmountTo * toPriceInUsdt;
-    // const estimatedAmountFromUsdt = estimatedAmountFrom * fromPriceInUsdt;
-
     return {
       uid: this.generateUid(),
       provider: providerName,
@@ -281,6 +361,7 @@ export class ExchangeService {
       estimated_amount_from_usdt: estimatedAmountFromUsdt.toString(),
       exchange_rate: exchangeRate.toString(),
       created_at: new Date().toISOString(),
+      // fee: 0,
       minAmount: providerResponse.minAmount.toString(),
       maxAmount:
         providerResponse.maxAmount !== null
@@ -356,6 +437,8 @@ export class ExchangeService {
   //   const ticker = token[tickerKey] as string | null;
   //   return ticker !== null && ticker !== '';
   // }
+
+  private getFee(quote: ExchangeQuote) {}
 
   private getTokenFromTokens(
     fromCurrency: string,
