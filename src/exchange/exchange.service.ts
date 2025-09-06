@@ -22,7 +22,6 @@ export interface ProviderSupport {
 
 @Injectable()
 export class ExchangeService {
-  private readonly logger = new Logger(ExchangeService.name);
   // Map of exchange requests
   private exchangeRequests: Map<string, ExchangeResponse> = new Map();
 
@@ -57,6 +56,7 @@ export class ExchangeService {
     // Update the exchange request
     const updatedExchangeRequest: ExchangeResponse = {
       ...exchangeRequest,
+      verified_txn: true,
       recipient_address: startSwap.recipient_address,
       selected_provider: startSwap.selected_provider,
       selected_quote_uid: startSwap.selected_quote_uid,

@@ -20,10 +20,23 @@ x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3Z
      "from_amount": "0.015",
      "from_currency": "ETH",
      "from_network": "ETH",
-     "to_currency": "FUSD",
-     "init": false, 
-     "to_network": "ZANO",
+     "to_currency": "BTC",
+     "init": true, 
+     "to_network": "BTC",
      "uuid_request": "yh43aee4-0076-400e-a8c9-erad90dc6545"
+}
+
+###
+POST http://localhost:4040/api/v2/swap/start_swap
+Content-Type: application/json
+Accept: application/json
+x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
+
+{
+     "uuid_request": "yh43aee4-0076-400e-a8c9-erad90dc6545",
+     "recipient_address": "0x925b098f9e5f2349926E1de19205b927237fbc46",
+     "selected_provider": "exolix",
+     "selected_quote_uid": "1757110100170-b86tgp46t"
 }
 
 ###   Partners gets Exolix

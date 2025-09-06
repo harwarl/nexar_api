@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { Swapv2Service } from './swapv2.service';
 import { Swapv2Controller } from './swapv2.controller';
-import { transactionProvidersV2 } from './schema/transaction.provider';
+import { transactionProvidersV2 } from './schema/transaction/transaction.provider';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DatabaseModule } from 'src/database/database.module';

@@ -24,6 +24,7 @@ export class Swapv2Controller {
   // This endpoint is to start the swap
   @Post('start_swap')
   async startSwap(@Body() startSwapDto: StartSwapDto) {
+    console.log({ startSwapDto });
     return this.swapv2Service.startSwap(startSwapDto);
   }
 }
