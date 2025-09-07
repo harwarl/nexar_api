@@ -61,6 +61,7 @@ export interface TransactionResponse {
   fromCurrency: string;
   toCurrency: string;
   amount: number;
+  amountToReceiver?: number;
   refundAddress?: string | null;
   payinHash: string | null;
   payoutHash: string | null;

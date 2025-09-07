@@ -140,7 +140,6 @@ export class ExolixProvider implements TokenProvider {
         ),
       );
 
-      // TODO: fill up from Network and toNetwork
       return {
         isError: false,
         txId: data.id,
@@ -151,6 +150,7 @@ export class ExolixProvider implements TokenProvider {
         fromCurrency: data.coinFrom.coinCode,
         toCurrency: data.coinTo.coinCode,
         amount: data.amount,
+        amountToReceiver: data.amountTo,
         status: data.status,
         payinHash: data.hashIn.hash,
         payoutHash: data.hashOut.hash,

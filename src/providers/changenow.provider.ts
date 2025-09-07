@@ -102,12 +102,12 @@ export class ChangeNowProvider implements TokenProvider {
         to: createTransactionPayload.toToken.ticker_changenow,
         amount: createTransactionPayload.amount,
         address: createTransactionPayload.recipient_address,
-        refundAddress: createTransactionPayload.refund_address || '',
+        // refundAddress: createTransactionPayload.refund_address || '', // TODO: update the refund amount
       });
 
       const { data } = await firstValueFrom(
         this.httpService.post(
-          `${AFFILIATE_DATA.CHANGENOW.baseUrl}transactions/api_key=${AFFILIATE_DATA.CHANGENOW.apiKey}`,
+          `${AFFILIATE_DATA.CHANGENOW.baseUrl}transactions/${AFFILIATE_DATA.CHANGENOW.apiKey}`,
           payload,
           {
             headers: {
@@ -121,6 +121,7 @@ export class ChangeNowProvider implements TokenProvider {
         throw new Error('No data received from ChangeNow');
       }
 
+      console.log({ data });
       return {
         isError: false,
         error: null,
@@ -129,7 +130,8 @@ export class ChangeNowProvider implements TokenProvider {
         payoutAddress: data.payoutAddress,
         fromCurrency: data.fromCurrency,
         toCurrency: data.toCurrency,
-        amount: data.amount,
+        amount: data.directedAmount,
+        amountToReceiver: data.amount,
         refundAddress: createTransactionPayload.refund_address ?? null,
         payinHash: data.payinHash || null,
         payoutHash: data.payoutHash || null,
@@ -138,9 +140,10 @@ export class ChangeNowProvider implements TokenProvider {
         status: data.status,
       };
     } catch (error) {
+      console.log({ error: error.response.data });
       return {
         isError: true,
-        error: error.message,
+        error: error.response.data.message || 'Transaction creation failed',
         txId: null,
         payinAddress: null,
         payoutAddress: null,

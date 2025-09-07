@@ -19,7 +19,10 @@ import { ExolixProvider } from 'src/providers/exolix.provider';
 import { FetchQuoteResponse } from 'src/providers/provider.interface';
 import { StartSwapDto } from 'src/swapv2/dto/startSwap.dto';
 import { Model } from 'mongoose';
-import { TransactionExchange } from 'src/swapv2/types/transaction';
+import {
+  CreateTransactionPayload,
+  TransactionExchange,
+} from 'src/swapv2/types/transaction';
 import { Quote } from 'src/swapv2/types/quote';
 
 export interface ProviderSupport {
@@ -116,6 +119,12 @@ export class ExchangeService {
     }
 
     // Get the transaction Details from the provider
+    const exchangeTransactionDetails = await this.getExchangeDetails(
+      selectedQuote,
+      updatedExchangeRequest,
+    );
+
+    console.log({ exchangeTransactionDetails });
 
     // Get the transaction Id from the provider in here
 
@@ -219,23 +228,38 @@ export class ExchangeService {
   // Get the exchange details from the provider
   private async getExchangeDetails(
     quote: ExchangeQuote,
-    exchangeRequest: ExchangeRequest,
+    exchangeRequest: ExchangeResponse,
   ): Promise<any> {
     if (!quote || !exchangeRequest) return null;
 
     let exchangeDetails = null;
+    const createTransactionPayload: CreateTransactionPayload = {
+      amount: exchangeRequest.from_amount,
+      recipient_address: exchangeRequest.recipient_address,
+      refund_address: exchangeRequest.recipient_address || null, // TODO: change this to refund address
+      fromToken: exchangeRequest.from_token_obj,
+      toToken: exchangeRequest.to_token_obj,
+    };
 
     switch (quote.provider) {
       case AFFILIATES.CHANGENOW:
+        exchangeDetails = this.changeNowProvider.createTransaction(
+          createTransactionPayload,
+        );
         break;
 
       case AFFILIATES.EXOLIX:
+        exchangeDetails = this.exolixProvider.createTransaction(
+          createTransactionPayload,
+        );
         break;
 
       default:
         exchangeDetails = null;
         break;
     }
+
+    return exchangeDetails;
   }
 
   // Validate the currencies in the exchange request
