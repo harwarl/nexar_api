@@ -2,7 +2,6 @@ import { TokenResponse } from 'src/tokens/tokens.interface';
 
 export interface TransactionExchange {
   status: string;
-  tx_id?: string;
   updatedAt: Date;
   createdAt: Date;
   uuid_request: string;
@@ -21,6 +20,13 @@ export interface TransactionExchange {
   selected_provider: string;
   selected_quote_uid: string;
   exchange_rate?: string;
+  quote_db_id: string;
+  tx_id: string;
+  amount: string;
+  amount_to_receiver: string;
+  refund_address?: string;
+  payinHash?: string;
+  payooutHash?: string;
 }
 
 export interface CreateTransactionPayload {

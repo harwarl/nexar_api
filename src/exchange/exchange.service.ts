@@ -16,7 +16,11 @@ import { TokenResponse } from 'src/tokens/tokens.interface';
 import { AFFILIATES } from 'src/providers/provider.data';
 import { ChangeNowProvider } from 'src/providers/changeNow.provider';
 import { ExolixProvider } from 'src/providers/exolix.provider';
-import { FetchQuoteResponse } from 'src/providers/provider.interface';
+import {
+  FetchQuoteResponse,
+  QuoteData,
+  TransactionResponse,
+} from 'src/providers/provider.interface';
 import { StartSwapDto } from 'src/swapv2/dto/startSwap.dto';
 import { Model } from 'mongoose';
 import {
@@ -82,26 +86,6 @@ export class ExchangeService {
     // Update the exchange request in the map
     this.exchangeRequests.set(startSwap.uuid_request, updatedExchangeRequest);
 
-    // Save the exchange request to the database  in here
-    // Saving the exchange request to the database
-    // const transaction = new this.transactionModelV2({
-    //   uuid_request: updatedExchangeRequest.uuid_request,
-    //   status: updatedExchangeRequest.status,
-    //   from_currency: updatedExchangeRequest.from_currency,
-    //   to_currency: updatedExchangeRequest.to_currency,
-    //   from_network: updatedExchangeRequest.from_network,
-    //   to_network: updatedExchangeRequest.to_network,
-    //   from_amount: updatedExchangeRequest.from_amount,
-    //   to_amount: updatedExchangeRequest.to_amount,
-    //   direction: updatedExchangeRequest.direction,
-    //   recipient_address: updatedExchangeRequest.recipient_address,
-    //   selected_provider: updatedExchangeRequest.selected_provider,
-    //   selected_quote_uid: updatedExchangeRequest.selected_quote_uid,
-    //   exchange_rate: updatedExchangeRequest.bestQuote.exchange_rate,
-    // });
-
-    // await transaction.save();
-
     // Start the transaction with the selected QuoteId
     // FIrst get the selected Quote
     const selectedQuote = updatedExchangeRequest.quotes.find(
@@ -118,19 +102,85 @@ export class ExchangeService {
       );
     }
 
-    // Get the transaction Details from the provider
-    const exchangeTransactionDetails = await this.getExchangeDetails(
-      selectedQuote,
-      updatedExchangeRequest,
-    );
+    // Get the transaction Details from the provider and in it includes the transactionId
+    const exchangeTransactionDetails: TransactionResponse =
+      await this.getExchangeDetails(selectedQuote, updatedExchangeRequest);
 
-    console.log({ exchangeTransactionDetails });
+    if (exchangeTransactionDetails.isError) {
+      throw new BadRequestException(exchangeTransactionDetails.error);
+    }
 
-    // Get the transaction Id from the provider in here
+    // I actually do not need the quote Id anymore
+    // //Save the quote to the quote DB
+    const quote = new this.quoteModel({
+      uuid_request: updatedExchangeRequest.uuid_request,
+      uid: selectedQuote.uid,
+      provider: selectedQuote.provider,
+      from_currency: updatedExchangeRequest.from_currency,
+      to_currency: updatedExchangeRequest.to_currency,
+      from_network: updatedExchangeRequest.from_network,
+      to_network: updatedExchangeRequest.to_network,
+      from_amount: updatedExchangeRequest.from_amount,
+      to_amount: updatedExchangeRequest.to_amount,
+      exchange_rate: selectedQuote.exchange_rate,
+      created_at: new Date(selectedQuote.created_at),
+      amount_to_usdt: selectedQuote.estimated_amount_to_usdt,
+      amount_from_usdt: selectedQuote.estimated_amount_from_usdt,
+      minAmount: selectedQuote.minAmount,
+      maxAmount: selectedQuote.maxAmount,
+    });
 
     // Save the selected quote to the database in here with ExchnageQuoteWithTxId type
+    const savedQuote = await quote.save();
 
-    return updatedExchangeRequest;
+    // Save the entire Transaction to the transaction DB
+    // Save the exchange request to the database  in here
+    // Saving the exchange request to the database
+    const transaction = new this.transactionModelV2({
+      uuid_request: updatedExchangeRequest.uuid_request,
+      status: updatedExchangeRequest.status,
+      from_currency: updatedExchangeRequest.from_currency,
+      to_currency: updatedExchangeRequest.to_currency,
+      from_network: updatedExchangeRequest.from_network,
+      to_network: updatedExchangeRequest.to_network,
+      from_amount: updatedExchangeRequest.from_amount,
+      to_amount: updatedExchangeRequest.to_amount,
+      direction: updatedExchangeRequest.direction,
+      recipient_address: updatedExchangeRequest.recipient_address,
+      selected_provider: updatedExchangeRequest.selected_provider,
+      selected_quote_uid: updatedExchangeRequest.selected_quote_uid,
+      exchange_rate: updatedExchangeRequest.bestQuote.exchange_rate,
+      tx_id: exchangeTransactionDetails?.txId,
+      amount: exchangeTransactionDetails?.amount,
+      amount_to_receiver: exchangeTransactionDetails?.amountToReceiver,
+      refund_address: exchangeTransactionDetails?.refundAddress,
+      payinHash: exchangeTransactionDetails?.payinHash,
+      payoutHash: exchangeTransactionDetails?.payoutHash,
+      quote_db_id: savedQuote.id,
+      payin_address: exchangeTransactionDetails.payinAddress,
+      payout_address: exchangeTransactionDetails.payoutAddress,
+    });
+
+    await transaction.save();
+
+    // Delete the exchange request in memory using cron job, only leave those within 12 hours below the current date
+
+    // return the payment info back to the user.
+    return {
+      success: true,
+      uuid_request: startSwap.uuid_request,
+      from_currency: updatedExchangeRequest.from_currency,
+      to_currency: updatedExchangeRequest.to_currency,
+      from_network: updatedExchangeRequest.from_network,
+      to_network: updatedExchangeRequest.to_network,
+      from_amount: updatedExchangeRequest.from_amount,
+      to_amount: updatedExchangeRequest.to_amount,
+      recipient_address: updatedExchangeRequest.recipient_address,
+      selected_provider: updatedExchangeRequest.selected_provider,
+      selected_quote_uid: updatedExchangeRequest.selected_quote_uid,
+      payin_address: exchangeTransactionDetails.payinAddress,
+      payout_address: exchangeTransactionDetails.payoutAddress,
+    };
   }
 
   // Calculates the exchnage rates
@@ -229,10 +279,10 @@ export class ExchangeService {
   private async getExchangeDetails(
     quote: ExchangeQuote,
     exchangeRequest: ExchangeResponse,
-  ): Promise<any> {
+  ): Promise<TransactionResponse | null> {
     if (!quote || !exchangeRequest) return null;
 
-    let exchangeDetails = null;
+    let exchangeDetails: TransactionResponse;
     const createTransactionPayload: CreateTransactionPayload = {
       amount: exchangeRequest.from_amount,
       recipient_address: exchangeRequest.recipient_address,
@@ -241,18 +291,21 @@ export class ExchangeService {
       toToken: exchangeRequest.to_token_obj,
     };
 
+    // Switch through the providers
     switch (quote.provider) {
       case AFFILIATES.CHANGENOW:
-        exchangeDetails = this.changeNowProvider.createTransaction(
+        exchangeDetails = await this.changeNowProvider.createTransaction(
           createTransactionPayload,
         );
         break;
 
       case AFFILIATES.EXOLIX:
-        exchangeDetails = this.exolixProvider.createTransaction(
+        exchangeDetails = await this.exolixProvider.createTransaction(
           createTransactionPayload,
         );
         break;
+
+      // TODO: add other exchange providers in here
 
       default:
         exchangeDetails = null;
