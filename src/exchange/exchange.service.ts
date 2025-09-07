@@ -28,6 +28,7 @@ import {
   TransactionExchange,
 } from 'src/swapv2/types/transaction';
 import { Quote } from 'src/swapv2/types/quote';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 export interface ProviderSupport {
   provider: string;
@@ -312,6 +313,20 @@ export class ExchangeService {
     }
 
     return exchangeDetails;
+  }
+
+  // Delete old exchange Requests to free up the memory using cron job every 2 hours
+  @Cron(CronExpression.EVERY_2_HOURS) // Runs every 2 hours
+  async deleteOldExchangeRequests() {
+    const now = Date.now();
+    const twelveHoursAgo = now - 12 * 60 * 60 * 1000;
+
+    for (const [uuid, request] of this.exchangeRequests) {
+      const requestTime = new Date(request.created_at).getTime();
+      if (requestTime < twelveHoursAgo) {
+        this.exchangeRequests.delete(uuid);
+      }
+    }
   }
 
   // Validate the currencies in the exchange request

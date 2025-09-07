@@ -41,7 +41,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     ProvidersModule,
     TokensModule,
     ExchangeModule,
-    // ScheduleModule.forRoot(), // For cron jobs
+    ScheduleModule.forRoot(), // For cron jobs
   ],
   controllers: [AppController],
   providers: [
