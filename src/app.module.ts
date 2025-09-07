@@ -18,6 +18,7 @@ import { NetworksModule } from './networks/networks.module';
 import { ProvidersModule } from './providers/providers.module';
 import { TokensModule } from './tokens/tokens.module';
 import { ExchangeModule } from './exchange/exchange.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { ExchangeModule } from './exchange/exchange.module';
     ProvidersModule,
     TokensModule,
     ExchangeModule,
+    // ScheduleModule.forRoot(), // For cron jobs
   ],
   controllers: [AppController],
   providers: [

@@ -53,6 +53,7 @@ export interface ExchangeResponseInit {
   bestQuote: ExchangeQuote;
   uuid_request: string;
   errors: Record<string, string>;
+  refund_address?: string | null;
 }
 
 export interface ExchangeResponse extends ExchangeResponseInit {

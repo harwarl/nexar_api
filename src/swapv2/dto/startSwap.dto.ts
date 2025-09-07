@@ -1,4 +1,4 @@
-import { IsString } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class StartSwapDto {
   @IsString()
@@ -12,4 +12,8 @@ export class StartSwapDto {
 
   @IsString()
   selected_quote_uid: string;
+
+  @IsString()
+  @IsOptional()
+  refund_address?: string;
 }

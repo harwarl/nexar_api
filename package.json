@@ -29,6 +29,7 @@
     "@nestjs/mapped-types": "*",
     "@nestjs/mongoose": "^11.0.3",
     "@nestjs/platform-express": "^10.0.0",
+    "@nestjs/schedule": "^6.0.0",
     "@nestjs/throttler": "^6.3.0",
     "@wormhole-foundation/sdk": "^1.13.3",
     "async-lock": "^1.4.1",

@@ -78,10 +78,9 @@ export class ExchangeService {
       recipient_address: startSwap.recipient_address,
       selected_provider: startSwap.selected_provider,
       selected_quote_uid: startSwap.selected_quote_uid,
+      refund_address: startSwap.refund_address || null,
       updated_at: new Date().toISOString(),
     };
-
-    console.log({ updatedExchangeRequest });
 
     // Update the exchange request in the map
     this.exchangeRequests.set(startSwap.uuid_request, updatedExchangeRequest);
@@ -106,7 +105,7 @@ export class ExchangeService {
     const exchangeTransactionDetails: TransactionResponse =
       await this.getExchangeDetails(selectedQuote, updatedExchangeRequest);
 
-    if (exchangeTransactionDetails.isError) {
+    if (exchangeTransactionDetails.isError === true) {
       throw new BadRequestException(exchangeTransactionDetails.error);
     }
 
@@ -286,7 +285,7 @@ export class ExchangeService {
     const createTransactionPayload: CreateTransactionPayload = {
       amount: exchangeRequest.from_amount,
       recipient_address: exchangeRequest.recipient_address,
-      refund_address: exchangeRequest.recipient_address || null, // TODO: change this to refund address
+      refund_address: exchangeRequest.refund_address || null, // TODO: change this to refund address
       fromToken: exchangeRequest.from_token_obj,
       toToken: exchangeRequest.to_token_obj,
     };
