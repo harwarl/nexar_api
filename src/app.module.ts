@@ -30,7 +30,23 @@ import { ScheduleModule } from '@nestjs/schedule';
         ETH_RPC: Joi.string().required(),
         ES_API_KEY: Joi.string().required(),
         ETH_API_URL: Joi.string().required(),
-        MASTER_KEY: Joi.string().required(),
+
+        // API Keys
+        EXOLIX_API_KEY: Joi.string().required(),
+        FIXED_FLOAT_API_KEY: Joi.string().required(),
+        CHANGE_NOW_API_KEY: Joi.string().required(),
+        SIMPLE_SWAP_API_KEY: Joi.string().required(),
+        SWAPUZ_API_KEY: Joi.string().required(),
+        FIXED_FLOAT_API_SECRET: Joi.string().required(),
+        COINGECKO_API_KEY: Joi.string().required(),
+
+        // API urls
+        EXOLIX_API_URL: Joi.string().required(),
+        FIXED_FLOAT_API_URL: Joi.string().required(),
+        CHANGENOW_URL: Joi.string().required(),
+        SIMPLE_SWAP_API_URL: Joi.string().required(),
+        SWAPUZ_API_URL: Joi.string().required(),
+        COINGECKO_URL: Joi.string().required(),
       }),
       envFilePath: ENV_FILE_PATH,
     }),
