@@ -23,4 +23,8 @@ export class Swapv2Service {
   async startSwap(startSwapDto: StartSwapDto) {
     return this.exchangeService.startSwap(startSwapDto);
   }
+
+  async getTransaction(uuid_request: string) {
+    return this.exchangeService.getTransaction(uuid_request);
+  }
 }

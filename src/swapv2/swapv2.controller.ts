@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { Swapv2Service } from './swapv2.service';
 import { GetTokensQueryDto } from './dto/getTokensQuery.dto';
 import { GetSwapRequestDto } from './dto/getSwapRequest.dto';
@@ -26,5 +26,11 @@ export class Swapv2Controller {
   async startSwap(@Body() startSwapDto: StartSwapDto) {
     console.log({ startSwapDto });
     return this.swapv2Service.startSwap(startSwapDto);
+  }
+
+  @Get('transaction/:uuid_request')
+  async getTransaction(@Param('uuid_request') uuid_request: string) {
+    console.log({ uuid_request });
+    return this.swapv2Service.getTransaction(uuid_request);
   }
 }

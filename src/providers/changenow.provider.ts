@@ -92,6 +92,59 @@ export class ChangeNowProvider implements TokenProvider {
     }
   }
 
+  async fetchTransactionByTransactionId(
+    tx_id: string,
+  ): Promise<TransactionResponse> {
+    try {
+      const { data } = await firstValueFrom(
+        this.httpService.get(
+          `${AFFILIATE_DATA.CHANGENOW.baseUrl}${tx_id}/${AFFILIATE_DATA.CHANGENOW.apiKey}`,
+        ),
+      );
+
+      return {
+        isError: false,
+        error: null,
+        txId: data.id,
+        payinAddress: data.payinAddress,
+        payoutAddress: data.payoutAddress,
+        fromCurrency: data.fromCurrency,
+        toCurrency: data.toCurrency,
+        amount: data.amountSend ? data.amountSend : data.expectedSendAmount,
+        amountToReceiver: data.amountReceive
+          ? data.amountReceive
+          : data.expectedReceiveAmount,
+        refundAddress: data.refundAddress || null,
+        payinHash: data.payinHash || null,
+        payoutHash: data.payoutHash || null,
+        fromNetwork: data.fromNetwork || null,
+        toNetwork: data.toNetwork || null,
+        status: data.status,
+        receivingAddress: data.tokensDestination || null,
+      };
+    } catch (error) {
+      console.log({ error: error.message });
+      return {
+        isError: true,
+        error: error.response?.data?.message || 'Failed to fetch transaction',
+        txId: null,
+        payinAddress: null,
+        payoutAddress: null,
+        fromCurrency: null,
+        toCurrency: null,
+        amount: null,
+        amountToReceiver: null,
+        refundAddress: null,
+        payinHash: null,
+        payoutHash: null,
+        fromNetwork: null,
+        toNetwork: null,
+        status: 'failed',
+        receivingAddress: null,
+      };
+    }
+  }
+
   async createTransaction(
     createTransactionPayload: CreateTransactionPayload,
   ): Promise<TransactionResponse> {
@@ -102,7 +155,7 @@ export class ChangeNowProvider implements TokenProvider {
         to: createTransactionPayload.toToken.ticker_changenow,
         amount: createTransactionPayload.amount,
         address: createTransactionPayload.recipient_address,
-        // refundAddress: createTransactionPayload.refund_address || '', // TODO: update the refund amount
+        refundAddress: createTransactionPayload.refund_address, // TODO: update the refund amount
       });
 
       const { data } = await firstValueFrom(
@@ -121,7 +174,6 @@ export class ChangeNowProvider implements TokenProvider {
         throw new Error('No data received from ChangeNow');
       }
 
-      console.log({ data });
       return {
         isError: false,
         error: null,

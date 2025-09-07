@@ -110,6 +110,68 @@ export class ExolixProvider implements TokenProvider {
     }
   }
 
+  async fetchTransactionByTransactionId(
+    tx_id: string,
+  ): Promise<TransactionResponse> {
+    try {
+      const { data } = await firstValueFrom(
+        this.httpService.get(
+          `${AFFILIATE_DATA.EXOLIX.baseUrl}${AFFILIATE_DATA.EXOLIX.endpoints.getTransactions}/${tx_id}`,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              Authorization: AFFILIATE_DATA.EXOLIX.apiKey,
+            },
+          },
+        ),
+      );
+
+      console.log({ data });
+
+      return {
+        isError: false,
+        error: null,
+        txId: data.id,
+        payinAddress: data.payinAddress,
+        payoutAddress: data.payoutAddress,
+        fromCurrency: data.fromCurrency,
+        toCurrency: data.toCurrency,
+        amount: data.amountSend ? data.amountSend : data.expectedSendAmount,
+        amountToReceiver: data.amountReceive
+          ? data.amountReceive
+          : data.expectedReceiveAmount,
+        refundAddress: data.refundAddress || null,
+        payinHash: data.payinHash || null,
+        payoutHash: data.payoutHash || null,
+        fromNetwork: data.fromNetwork || null,
+        toNetwork: data.toNetwork || null,
+        status: data.status,
+        receivingAddress: data.tokensDestination || null,
+      };
+    } catch (error) {
+      console.log({ error: error.message });
+      return {
+        isError: true,
+        error: error.response?.data?.message || 'Failed to fetch transaction',
+        txId: null,
+        payinAddress: null,
+        payoutAddress: null,
+        fromCurrency: null,
+        toCurrency: null,
+        amount: null,
+        amountToReceiver: null,
+        refundAddress: null,
+        payinHash: null,
+        payoutHash: null,
+        fromNetwork: null,
+        toNetwork: null,
+        status: 'failed',
+        receivingAddress: null,
+      };
+    }
+  }
+
   async createTransaction(
     createTransactionPayload: CreateTransactionPayload,
   ): Promise<TransactionResponse> {

@@ -7,6 +7,7 @@ export interface TokenProvider {
   createTransaction?(
     createTransactionPayload: CreateTransactionPayload,
   ): Promise<TransactionResponse>;
+  fetchTransactionByTransactionId?(tx_id: string): Promise<TransactionResponse>;
   fetchQuote?(getQuoteData: QuoteData): Promise<any>;
   fetchSupportedNetworks?(): Promise<ProviderNetwork[]>;
 }
@@ -67,4 +68,6 @@ export interface TransactionResponse {
   payoutHash: string | null;
   fromNetwork: string;
   toNetwork: string;
+  depositReceivedAt?: string;
+  receivingAddress?: string;
 }

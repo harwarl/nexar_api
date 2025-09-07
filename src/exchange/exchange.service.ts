@@ -138,7 +138,7 @@ export class ExchangeService {
     // Saving the exchange request to the database
     const transaction = new this.transactionModelV2({
       uuid_request: updatedExchangeRequest.uuid_request,
-      status: updatedExchangeRequest.status,
+      status: this.generalizeStatus(updatedExchangeRequest.status),
       from_currency: updatedExchangeRequest.from_currency,
       to_currency: updatedExchangeRequest.to_currency,
       from_network: updatedExchangeRequest.from_network,
@@ -162,7 +162,6 @@ export class ExchangeService {
     });
 
     await transaction.save();
-
     // Delete the exchange request in memory using cron job, only leave those within 12 hours below the current date
 
     // return the payment info back to the user.
@@ -286,7 +285,7 @@ export class ExchangeService {
     const createTransactionPayload: CreateTransactionPayload = {
       amount: exchangeRequest.from_amount,
       recipient_address: exchangeRequest.recipient_address,
-      refund_address: exchangeRequest.refund_address || null, // TODO: change this to refund address
+      refund_address: exchangeRequest.refund_address ?? null,
       fromToken: exchangeRequest.from_token_obj,
       toToken: exchangeRequest.to_token_obj,
     };
@@ -364,6 +363,90 @@ export class ExchangeService {
     };
   }
 
+  // Get Transaction using UUID
+  async getTransaction(uuid_request: string) {
+    const transaction = await this.transactionModelV2.findOne({
+      uuid_request: uuid_request,
+    });
+
+    console.log({ transaction });
+
+    if (!transaction) {
+      throw new BadRequestException('Transaction not found');
+    }
+
+    // Get the provider and the tx_id from the transaction object
+    const provider = transaction.selected_provider;
+    const tx_id = transaction.tx_id;
+
+    if (!provider || !tx_id) {
+      throw new BadRequestException('Provider or transaction ID not found');
+    }
+
+    let transactionStatus: any;
+    // Get the transaction status from the provider
+
+    transactionStatus = await this.getTransactionStatusFromProvider(
+      provider,
+      tx_id,
+    );
+
+    // Update the transaction if there are any differences in what is coming from the provider and what is in the database
+    if (transactionStatus && transactionStatus.status !== transaction.status) {
+      console.log({
+        transactionStatus: transactionStatus.status,
+        generalized: this.generalizeStatus(transactionStatus.status),
+      });
+
+      transaction.status = this.generalizeStatus(transactionStatus.status);
+      transaction.payin_hash = transactionStatus?.payinHash ?? '';
+      transaction.payout_hash = transactionStatus?.payoutHash ?? '';
+      transaction.amount = transactionStatus?.amount ?? transaction.amount;
+      transaction.amount_to_receiver =
+        transactionStatus.amount_to_receiver ?? transaction.amount_to_receiver;
+
+      // Update the transaction in the database
+      await transaction.save();
+    }
+
+    const transaction_obj = transaction.toObject();
+    delete transaction_obj._id;
+    delete transaction_obj.__v;
+    delete transaction_obj.selected_quote_uid;
+    delete transaction_obj.tx_id;
+    delete transaction_obj.quote_db_id;
+
+    // Return the transaction_obj in the database
+    return transaction_obj;
+  }
+
+  // Get the transaction details from the provider using the tx_id
+  private async getTransactionStatusFromProvider(
+    providerName: string,
+    txId: string,
+  ): Promise<TransactionResponse | null> {
+    // Get the transaction from the provider
+    let transaction: TransactionResponse;
+
+    switch (providerName) {
+      case AFFILIATES.CHANGENOW:
+        transaction =
+          await this.changeNowProvider.fetchTransactionByTransactionId(txId);
+        break;
+
+      case AFFILIATES.EXOLIX:
+        transaction =
+          await this.exolixProvider.fetchTransactionByTransactionId(txId);
+        break;
+
+      default:
+        return null;
+    }
+
+    return transaction;
+  }
+
+  // get the provider quotes
   private async getProviderQuotes(
     fromCurrency: string,
     toCurrency: string,
@@ -612,5 +695,28 @@ export class ExchangeService {
       )
         return token;
     });
+  }
+
+  // Generalized the status across providers
+  // Using general statuses: PENDING, CONFIRMING, EXCHANGING, COMPLETED, FAILED, REFUNDED
+  private generalizeStatus(status: string): string {
+    const statusMap: Record<string, string> = {
+      new: 'PENDING',
+      waiting: 'PENDING',
+      confirming: 'CONFIRMING',
+      exchanging: 'EXCHANGING',
+      sending: 'EXCHANGING',
+      verifying: 'CONFIRMING',
+      finished: 'COMPLETED',
+      failed: 'FAILED',
+      refunded: 'REFUNDED',
+      wait: 'PENDING',
+      confirmation: 'CONFIRMING',
+      confirmed: 'CONFIRMING',
+      success: 'COMPLETED',
+      overdue: 'FAILED',
+    };
+
+    return statusMap[status.toLowerCase()] || 'PENDING';
   }
 }
