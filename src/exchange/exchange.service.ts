@@ -18,7 +18,6 @@ import { ChangeNowProvider } from 'src/providers/changeNow.provider';
 import { ExolixProvider } from 'src/providers/exolix.provider';
 import {
   FetchQuoteResponse,
-  QuoteData,
   TransactionResponse,
 } from 'src/providers/provider.interface';
 import { StartSwapDto } from 'src/swapv2/dto/startSwap.dto';
@@ -38,6 +37,7 @@ export interface ProviderSupport {
 
 @Injectable()
 export class ExchangeService {
+  private readonly logger = new Logger(ExchangeService.name);
   // Map of exchange requests
   private exchangeRequests: Map<string, ExchangeResponse> = new Map();
 
@@ -326,6 +326,8 @@ export class ExchangeService {
         this.exchangeRequests.delete(uuid);
       }
     }
+
+    this.logger.log('Old exchange requests cleaned up');
   }
 
   // Validate the currencies in the exchange request
