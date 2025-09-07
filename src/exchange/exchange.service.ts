@@ -702,19 +702,19 @@ export class ExchangeService {
   private generalizeStatus(status: string): string {
     const statusMap: Record<string, string> = {
       new: 'PENDING',
-      waiting: 'PENDING',
+      waiting: 'WAITING',
       confirming: 'CONFIRMING',
+      overdue: 'OVERDUE',
       exchanging: 'EXCHANGING',
       sending: 'EXCHANGING',
       verifying: 'CONFIRMING',
       finished: 'COMPLETED',
       failed: 'FAILED',
       refunded: 'REFUNDED',
-      wait: 'PENDING',
+      wait: 'WAITING',
       confirmation: 'CONFIRMING',
       confirmed: 'CONFIRMING',
       success: 'COMPLETED',
-      overdue: 'FAILED',
     };
 
     return statusMap[status.toLowerCase()] || 'PENDING';
