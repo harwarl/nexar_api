@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { Swapv2Service } from './swapv2.service';
 import { Swapv2Controller } from './swapv2.controller';
-import { transactionProvidersV2 } from './schema/transaction/transaction.provider';
+import { TransactionProvidersV2 } from './schema/transaction/transaction.provider';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DatabaseModule } from 'src/database/database.module';
@@ -23,6 +23,6 @@ import { ExchangeModule } from 'src/exchange/exchange.module';
     ExchangeModule,
   ],
   controllers: [Swapv2Controller],
-  providers: [Swapv2Service, ...transactionProvidersV2],
+  providers: [Swapv2Service],
 })
 export class Swapv2Module {}

@@ -4,11 +4,14 @@ import {
   ProviderToken,
   QuoteData,
   TokenProvider,
+  TransactionResponse,
 } from './provider.interface';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { AFFILIATE_DATA } from './provider.data';
 import { getQuote } from '@across-protocol/app-sdk';
+import { CreateTransactionDto } from 'src/swapv2/dto/createTransaction.dto';
+import { CreateTransactionPayload } from 'src/swapv2/types/transaction';
 
 @Injectable()
 export class ExolixProvider implements TokenProvider {
@@ -104,6 +107,73 @@ export class ExolixProvider implements TokenProvider {
           message: error.response.data.message ?? '',
         };
       }
+    }
+  }
+
+  async createTransaction(
+    createTransactionPayload: CreateTransactionPayload,
+  ): Promise<TransactionResponse> {
+    try {
+      const payload = {
+        coinFrom: createTransactionPayload.fromToken.ticker_exolix,
+        coinTo: createTransactionPayload.toToken.ticker_exolix,
+        networkFrom:
+          createTransactionPayload.fromToken.token_network.ticker_exolix,
+        networkTo: createTransactionPayload.toToken.token_network.ticker_exolix,
+        amount: createTransactionPayload.amount,
+        withdrawalAddress: createTransactionPayload.recipient_address,
+        refundAddress: createTransactionPayload.refund_address || '',
+        rateType: 'float',
+      };
+
+      const { data } = await firstValueFrom(
+        this.httpService.post(
+          `${AFFILIATE_DATA.EXOLIX.baseUrl}${AFFILIATE_DATA.EXOLIX.endpoints.getTransactions}`,
+          payload,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              Authorization: AFFILIATE_DATA.EXOLIX.apiKey,
+            },
+          },
+        ),
+      );
+
+      // TODO: fill up from Network and toNetwork
+      return {
+        isError: false,
+        txId: data.id,
+        error: null,
+        payinAddress: data.depositAddress,
+        payoutAddress: data.withdrawalAddress,
+        refundAddress: data.refundAddress || null,
+        fromCurrency: data.coinFrom.coinCode,
+        toCurrency: data.coinTo.coinCode,
+        amount: data.amount,
+        status: data.status,
+        payinHash: data.hashIn.hash,
+        payoutHash: data.hashOut.hash,
+        fromNetwork: '',
+        toNetwork: '',
+      };
+    } catch (error) {
+      return {
+        isError: true,
+        error: error.message,
+        txId: null,
+        payinAddress: null,
+        payoutAddress: null,
+        status: 'failed',
+        fromCurrency: createTransactionPayload.fromToken.ticker_exolix,
+        toCurrency: createTransactionPayload.toToken.ticker_exolix,
+        amount: Number(createTransactionPayload.amount),
+        refundAddress: createTransactionPayload.refund_address || null,
+        payinHash: null,
+        payoutHash: null,
+        fromNetwork: '',
+        toNetwork: '',
+      };
     }
   }
 

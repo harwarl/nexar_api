@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { CoingeckoProvider } from 'src/providers/coingecko.provider';
 import { TokensService } from 'src/tokens/tokens.service';
 import {
@@ -13,6 +18,9 @@ import { ChangeNowProvider } from 'src/providers/changeNow.provider';
 import { ExolixProvider } from 'src/providers/exolix.provider';
 import { FetchQuoteResponse } from 'src/providers/provider.interface';
 import { StartSwapDto } from 'src/swapv2/dto/startSwap.dto';
+import { Model } from 'mongoose';
+import { TransactionExchange } from 'src/swapv2/types/transaction';
+import { Quote } from 'src/swapv2/types/quote';
 
 export interface ProviderSupport {
   provider: string;
@@ -30,6 +38,9 @@ export class ExchangeService {
     private readonly coingeckoProvider: CoingeckoProvider,
     private readonly exolixProvider: ExolixProvider,
     private readonly changeNowProvider: ChangeNowProvider,
+    @Inject('QUOTE_MODEL') private quoteModel: Model<Quote>,
+    @Inject('TRANSACTION_MODEL_V2')
+    private transactionModelV2: Model<TransactionExchange>,
   ) {}
 
   // Start swap
@@ -63,10 +74,48 @@ export class ExchangeService {
       updated_at: new Date().toISOString(),
     };
 
+    console.log({ updatedExchangeRequest });
+
     // Update the exchange request in the map
     this.exchangeRequests.set(startSwap.uuid_request, updatedExchangeRequest);
 
     // Save the exchange request to the database  in here
+    // Saving the exchange request to the database
+    // const transaction = new this.transactionModelV2({
+    //   uuid_request: updatedExchangeRequest.uuid_request,
+    //   status: updatedExchangeRequest.status,
+    //   from_currency: updatedExchangeRequest.from_currency,
+    //   to_currency: updatedExchangeRequest.to_currency,
+    //   from_network: updatedExchangeRequest.from_network,
+    //   to_network: updatedExchangeRequest.to_network,
+    //   from_amount: updatedExchangeRequest.from_amount,
+    //   to_amount: updatedExchangeRequest.to_amount,
+    //   direction: updatedExchangeRequest.direction,
+    //   recipient_address: updatedExchangeRequest.recipient_address,
+    //   selected_provider: updatedExchangeRequest.selected_provider,
+    //   selected_quote_uid: updatedExchangeRequest.selected_quote_uid,
+    //   exchange_rate: updatedExchangeRequest.bestQuote.exchange_rate,
+    // });
+
+    // await transaction.save();
+
+    // Start the transaction with the selected QuoteId
+    // FIrst get the selected Quote
+    const selectedQuote = updatedExchangeRequest.quotes.find(
+      (quote: ExchangeQuote) => quote.uid === startSwap.selected_quote_uid,
+    );
+
+    if (!selectedQuote) {
+      throw new BadRequestException('Selected quote not found');
+    }
+
+    if (selectedQuote.provider !== startSwap.selected_provider) {
+      throw new BadRequestException(
+        'Selected provider does not match the quote provider',
+      );
+    }
+
+    // Get the transaction Details from the provider
 
     // Get the transaction Id from the provider in here
 
@@ -158,9 +207,35 @@ export class ExchangeService {
       errors: providerQuotes.error,
     };
 
-    this.exchangeRequests.set(request.uuid_request, exchangeResponse);
+    this.exchangeRequests.set(request.uuid_request, {
+      ...exchangeResponse,
+      from_token_obj: currencyValidated.fromTokenObj,
+      to_token_obj: currencyValidated.toTokenObj,
+    });
 
     return exchangeResponse;
+  }
+
+  // Get the exchange details from the provider
+  private async getExchangeDetails(
+    quote: ExchangeQuote,
+    exchangeRequest: ExchangeRequest,
+  ): Promise<any> {
+    if (!quote || !exchangeRequest) return null;
+
+    let exchangeDetails = null;
+
+    switch (quote.provider) {
+      case AFFILIATES.CHANGENOW:
+        break;
+
+      case AFFILIATES.EXOLIX:
+        break;
+
+      default:
+        exchangeDetails = null;
+        break;
+    }
   }
 
   // Validate the currencies in the exchange request
@@ -430,13 +505,6 @@ export class ExchangeService {
 
     return providersA.filter((provider) => providersB.includes(provider));
   }
-
-  // Checks if a provider is supported
-  // private isProviderSupported(token: any, providerName: string): boolean {
-  //   const tickerKey = `ticker_${providerName}` as keyof typeof token;
-  //   const ticker = token[tickerKey] as string | null;
-  //   return ticker !== null && ticker !== '';
-  // }
 
   private getFee(quote: ExchangeQuote) {}
 

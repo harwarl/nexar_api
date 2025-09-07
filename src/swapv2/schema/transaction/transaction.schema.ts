@@ -17,5 +17,5 @@ export const TransactionSchemaV2 = new mongoose.Schema(
     tx_id: { type: String },
     exchange_rate: { type: String },
   },
-  { timestamps: false },
+  { timestamps: true },
 );

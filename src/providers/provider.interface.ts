@@ -1,6 +1,12 @@
+import { CreateTransactionDto } from 'src/swapv2/dto/createTransaction.dto';
+import { CreateTransactionPayload } from 'src/swapv2/types/transaction';
+
 export interface TokenProvider {
   readonly name: string;
   fetchSupportedTokens(): Promise<ProviderToken[]>;
+  createTransaction?(
+    createTransactionPayload: CreateTransactionPayload,
+  ): Promise<TransactionResponse>;
   fetchQuote?(getQuoteData: QuoteData): Promise<any>;
   fetchSupportedNetworks?(): Promise<ProviderNetwork[]>;
 }
@@ -41,4 +47,23 @@ export interface FetchQuoteResponse {
   fromAmount: number;
   toAmount: number;
   rate: number;
+}
+
+export interface TransactionResponse {
+  isError: boolean;
+  error?: string | null;
+  txId: string | null;
+  payinAddress: string;
+  payoutAddress: string;
+  status: string;
+  // payinExtraId?: string | null;
+  // payoutExtraId?: string | null;
+  fromCurrency: string;
+  toCurrency: string;
+  amount: number;
+  refundAddress?: string | null;
+  payinHash: string | null;
+  payoutHash: string | null;
+  fromNetwork: string;
+  toNetwork: string;
 }

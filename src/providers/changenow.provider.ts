@@ -7,9 +7,11 @@ import {
 } from './provider.interface';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import { PROVIDERS } from 'utils/constants';
 import { ConfigService } from '@nestjs/config';
 import { AFFILIATE_DATA } from './provider.data';
+import { CreateTransactionDto } from 'src/swapv2/dto/createTransaction.dto';
+import { TransactionResponse } from './provider.interface';
+import { CreateTransactionPayload } from 'src/swapv2/types/transaction';
 
 interface ChangeNowCurrency {
   ticker: string;
@@ -29,7 +31,7 @@ export class ChangeNowProvider implements TokenProvider {
 
   constructor(
     private readonly httpService: HttpService,
-    private readonly configService: ConfigService,
+    // private readonly configService: ConfigService,
   ) {}
 
   async fetchSupportedTokens(): Promise<ProviderToken[]> {
@@ -87,6 +89,71 @@ export class ChangeNowProvider implements TokenProvider {
           message: error.response.data.message ?? '',
         };
       }
+    }
+  }
+
+  async createTransaction(
+    createTransactionPayload: CreateTransactionPayload,
+  ): Promise<TransactionResponse> {
+    try {
+      // Implementation for creating a transaction with ChangeNow
+      const payload = JSON.stringify({
+        from: createTransactionPayload.fromToken.ticker_changenow,
+        to: createTransactionPayload.toToken.ticker_changenow,
+        amount: createTransactionPayload.amount,
+        address: createTransactionPayload.recipient_address,
+        refundAddress: createTransactionPayload.refund_address || '',
+      });
+
+      const { data } = await firstValueFrom(
+        this.httpService.post(
+          `${AFFILIATE_DATA.CHANGENOW.baseUrl}transactions/api_key=${AFFILIATE_DATA.CHANGENOW.apiKey}`,
+          payload,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        ),
+      );
+
+      if (!data) {
+        throw new Error('No data received from ChangeNow');
+      }
+
+      return {
+        isError: false,
+        error: null,
+        txId: data.id,
+        payinAddress: data.payinAddress,
+        payoutAddress: data.payoutAddress,
+        fromCurrency: data.fromCurrency,
+        toCurrency: data.toCurrency,
+        amount: data.amount,
+        refundAddress: createTransactionPayload.refund_address ?? null,
+        payinHash: data.payinHash || null,
+        payoutHash: data.payoutHash || null,
+        fromNetwork: data.fromNetwork || null,
+        toNetwork: data.toNetwork || null,
+        status: data.status,
+      };
+    } catch (error) {
+      return {
+        isError: true,
+        error: error.message,
+        txId: null,
+        payinAddress: null,
+        payoutAddress: null,
+        fromCurrency: null,
+        toCurrency: null,
+        amount: null,
+        refundAddress: null,
+        payinHash: null,
+        payoutHash: null,
+        fromNetwork: null,
+        toNetwork: null,
+        status: 'failed',
+      };
     }
   }
 

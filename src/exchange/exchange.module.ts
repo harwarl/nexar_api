@@ -5,10 +5,19 @@ import { TokensModule } from 'src/tokens/tokens.module';
 import { ExolixProvider } from 'src/providers/exolix.provider';
 import { ChangeNowProvider } from 'src/providers/changeNow.provider';
 import { HttpModule } from '@nestjs/axios';
+import { DatabaseModule } from 'src/database/database.module';
+import { QuoteProvider } from 'src/swapv2/schema/quote/quote.provider';
+import { TransactionProvidersV2 } from 'src/swapv2/schema/transaction/transaction.provider';
 
 @Module({
-  imports: [ProvidersModule, TokensModule, HttpModule],
-  providers: [ExchangeService, ExolixProvider, ChangeNowProvider],
+  imports: [ProvidersModule, TokensModule, HttpModule, DatabaseModule],
+  providers: [
+    ExchangeService,
+    ExolixProvider,
+    ChangeNowProvider,
+    ...QuoteProvider,
+    ...TransactionProvidersV2,
+  ],
   exports: [ExchangeService],
 })
 export class ExchangeModule {}

@@ -1,7 +1,7 @@
 import { Connection } from 'mongoose';
 import { TransactionSchemaV2 } from './transaction.schema';
 
-export const transactionProvidersV2 = [
+export const TransactionProvidersV2 = [
   {
     provide: 'TRANSACTION_MODEL_V2',
     useFactory: (connection: Connection) =>

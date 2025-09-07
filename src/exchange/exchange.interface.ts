@@ -1,4 +1,5 @@
 import { AFFILIATES } from 'src/providers/provider.data';
+import { TokenResponse } from 'src/tokens/tokens.interface';
 
 export interface ExchangeRequest {
   from_currency: string;
@@ -48,7 +49,7 @@ export interface ExchangeResponseInit {
   status: string;
   created_at: string;
   updated_at: string;
-  quotes: ExchangeQuote[] | ExchangeQuoteWithTxId;
+  quotes: ExchangeQuote[] | ExchangeQuoteWithTxId[];
   bestQuote: ExchangeQuote;
   uuid_request: string;
   errors: Record<string, string>;
@@ -59,6 +60,8 @@ export interface ExchangeResponse extends ExchangeResponseInit {
   recipient_address?: string | null;
   selected_provider?: string | null;
   selected_quote_uid?: string | null;
+  from_token_obj: TokenResponse;
+  to_token_obj: TokenResponse;
 }
 
 export interface ProviderQuote {

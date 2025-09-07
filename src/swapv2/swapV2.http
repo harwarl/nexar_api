@@ -21,7 +21,7 @@ x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3Z
      "from_currency": "ETH",
      "from_network": "ETH",
      "to_currency": "BTC",
-     "init": true, 
+     "init": false, 
      "to_network": "BTC",
      "uuid_request": "yh43aee4-0076-400e-a8c9-erad90dc6545"
 }
@@ -35,8 +35,8 @@ x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3Z
 {
      "uuid_request": "yh43aee4-0076-400e-a8c9-erad90dc6545",
      "recipient_address": "0x925b098f9e5f2349926E1de19205b927237fbc46",
-     "selected_provider": "exolix",
-     "selected_quote_uid": "1757110100170-b86tgp46t"
+     "selected_provider": "changenow",
+     "selected_quote_uid": "1757234694317-cm4zagk5e"
 }
 
 ###   Partners gets Exolix
