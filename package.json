@@ -30,6 +30,7 @@
     "@nestjs/mongoose": "^11.0.3",
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/schedule": "^6.0.0",
+    "@nestjs/swagger": "^11.2.0",
     "@nestjs/throttler": "^6.3.0",
     "@wormhole-foundation/sdk": "^1.13.3",
     "async-lock": "^1.4.1",
@@ -42,6 +43,7 @@
     "mongoose": "^8.10.0",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1",
+    "swagger-ui-express": "^5.0.1",
     "uuid": "^11.1.0",
     "viem": "^2.31.6"
   },

@@ -1,6 +1,8 @@
-import { Controller, Get, Param, Post, Query, Req } from '@nestjs/common';
+import { Controller, Get, Post, Req } from '@nestjs/common';
 import { KeysService } from './keys.service';
+import { ApiExcludeController } from '@nestjs/swagger';
 
+@ApiExcludeController()
 @Controller({ path: 'keys', version: '1' })
 export class KeysController {
   constructor(private readonly keysService: KeysService) {}

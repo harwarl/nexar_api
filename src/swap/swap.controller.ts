@@ -1,7 +1,9 @@
 import { Body, Controller, Get, Param, Post, Query, Req } from '@nestjs/common';
 import { SwapServiceV1 } from './swap.service';
 import { CreateTransactionDto } from './dto/createTransaction.dto';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Swap V1')
 @Controller({ path: 'swap', version: '1' })
 export class SwapControllerV1 {
   constructor(private readonly swapService: SwapServiceV1) {}
