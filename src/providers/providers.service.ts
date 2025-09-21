@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { TokenProvider } from './provider.interface';
-import { ChangeNowProvider } from './changeNow.provider';
+import { ChangeNowProvider } from './changenow.provider';
 import { ExolixProvider } from './exolix.provider';
 import { CoingeckoProvider } from './coingecko.provider';
 

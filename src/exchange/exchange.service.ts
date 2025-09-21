@@ -14,7 +14,8 @@ import {
 } from './exchange.interface';
 import { TokenResponse } from 'src/tokens/tokens.interface';
 import { AFFILIATES } from 'src/providers/provider.data';
-import { ChangeNowProvider } from 'src/providers/changeNow.provider';
+// import { ChangeNowProvider } from 'src/providers/changeNow.provider';
+import { ChangeNowProvider } from 'src/providers/changenow.provider';
 import { ExolixProvider } from 'src/providers/exolix.provider';
 import {
   FetchQuoteResponse,
