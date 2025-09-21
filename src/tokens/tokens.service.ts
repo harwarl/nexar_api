@@ -4,6 +4,7 @@ import { ProviderToken, TokenProvider } from 'src/providers/provider.interface';
 import { ProvidersService } from 'src/providers/providers.service';
 import { TokenData, TokenResponse } from './tokens.interface';
 import { AFFILIATE_DATA } from 'src/providers/provider.data';
+import { TOP20_TOKENS } from 'utils/constants';
 
 @Injectable()
 export class TokensService implements OnModuleInit {
@@ -61,7 +62,8 @@ export class TokensService implements OnModuleInit {
   }
 
   async getTokens(query: any): Promise<{
-    results: TokenResponse[];
+    popular: TokenResponse[];
+    tokens: TokenResponse[];
     pagination: any;
     last_updated: string;
   }> {
@@ -72,10 +74,14 @@ export class TokensService implements OnModuleInit {
 
     if (search) {
       const searchLower = search.toLowerCase();
-      filteredTokens = filteredTokens.filter((token: any) => {
-        token.code.toLowerCase().includes(searchLower) ||
-          token.code_name.toLowerCase().includes(searchLower);
-      });
+
+      filteredTokens = filteredTokens.filter((token: any) =>
+        [token.code, token.code_name, token.network_name]
+          .filter(Boolean)
+          .some((field) => field.toLowerCase().includes(searchLower)),
+      );
+
+      console.log('Filtered Tokens:', filteredTokens);
     }
 
     if (network) {
@@ -103,8 +109,18 @@ export class TokensService implements OnModuleInit {
     // Get paginated result
     const paginatedResults = filteredTokens.slice(startIndex, endIndex);
 
+    // Filter tokens that match the top 20 codes
+    const top20 = filteredTokens.filter((t: any) =>
+      TOP20_TOKENS.some(
+        (ref) =>
+          t.code?.toUpperCase() === ref.code &&
+          t.network_name?.toLowerCase() === ref.network.toLowerCase(),
+      ),
+    );
+
     return {
-      results: paginatedResults,
+      popular: top20,
+      tokens: paginatedResults,
       pagination: {
         total,
         page: currentPage,

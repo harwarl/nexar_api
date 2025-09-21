@@ -121,3 +121,27 @@ export const PROVIDERS = {
 
 // Buffer gas to add to the transaction amount
 export const BUFFER_GAS = '0.0008';
+
+// Top 20 tokens
+export const TOP20_TOKENS = [
+  { code: 'BTC', network: 'Btc' },
+  { code: 'ETH', network: 'Eth' },
+  { code: 'XRP', network: 'XRP Ledger' },
+  { code: 'USDT', network: 'Eth' }, // USDT exists on many chains
+  { code: 'BNB', network: 'BNB Chain' },
+  { code: 'SOL', network: 'Sol' },
+  { code: 'USDC', network: 'Eth' }, // same here
+  { code: 'USDT', network: 'Optimism' },
+  { code: 'USDT', network: 'Trx' },
+  { code: 'USDT', network: 'Sol' },
+  { code: 'USDT', network: 'Near' },
+  { code: 'USDT', network: 'Ton' },
+  { code: 'DOGE', network: 'Doge' },
+  { code: 'ADA', network: 'Ada' },
+  { code: 'LINK', network: 'Eth' },
+  { code: 'AVAX', network: 'Avax' },
+  { code: 'WBTC', network: 'Eth' },
+  { code: 'BCH', network: 'Bch' },
+  { code: 'TON', network: 'Ton' },
+  { code: 'SHIB', network: 'Eth' },
+];
