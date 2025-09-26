@@ -4,7 +4,7 @@ Accept: application/json
 x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
 
 ###
-GET http://localhost:4040/api/v2/swap/tokens?search=bsc
+GET http://localhost:4040/api/v2/swap/tokens?search=optimism
 Content-Type: application/json
 Accept: application/json
 x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
@@ -23,7 +23,7 @@ x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3Z
      "to_currency": "ETH",
      "to_network": "ETH",
      "init": true, 
-     "uuid_request": "yh43aee4-0076-400e-a8c9-ered90dc6456"
+     "uuid_request": "4cb09216-6897-4fed-a4f6-8887344e67abd"
 }
 
 ###
@@ -33,14 +33,14 @@ Accept: application/json
 x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
 
 {
-     "uuid_request": "yh43aee4-0076-400e-a8c9-ered90dc6456",
+     "uuid_request": "91b28175-bc6a-4db3-8eb8-17f38d33ab04",
      "recipient_address": "0x925b098f9e5f2349926E1de19205b927237fbc46",
      "selected_provider": "exolix",
-     "selected_quote_uid": "1757264586342-30e8urolb"
+     "selected_quote_uid": "1758744145702-npgfubvo0"
 }
 
 ### Get Transaction
-GET http://localhost:4040/api/v2/swap/transaction/yh43aee4-0076-400e-a8c9-ered90dc6456
+GET http://localhost:4040/api/v2/swap/transaction/230a538b-149a-43c8-8ea1-edac9bc3a024
 Content-Type: application/json
 Accept: application/json
 x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
@@ -58,16 +58,16 @@ Authorization:
 # X-API-KEY: 
 # X-API-SIGN: 
 
-# ### SWAPUZ
-# GET https://api.swapuz.com/api/home/v1/coins
-# Content-Type: application/json
-# Accept: application/json
-# Api-Key:
+### SWAPUZ
+GET https://api.swapuz.com/api/home/v1/coins
+Content-Type: application/json
+Accept: application/json
+Api-Key:a5a5170f-3c56-4e9a-ad34-07b56aff14e0
 
-# ### Simple Swap
-# GET https://api.simpleswap.io/get_all_currencies?api_key=a826bbc0-9549-4749-a718-59a8d30aa9a7
-# Content-Type: application/json
-# Accept: application/json
+### Simple Swap
+GET https://api.simpleswap.io/get_all_currencies?api_key=a826bbc0-9549-4749-a718-59a8d30aa9a7
+Content-Type: application/json
+Accept: application/json
 
 ###
 GET https://api.changenow.io/v1/currencies?active=true&fixedRate=true

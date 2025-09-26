@@ -254,6 +254,7 @@ export class ExolixProvider implements TokenProvider {
           iconUrl: token.icon,
         });
       }
+      
     }
 
     return transformedTokens;

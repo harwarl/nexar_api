@@ -145,3 +145,20 @@ export const TOP20_TOKENS = [
   { code: 'TON', network: 'Ton' },
   { code: 'SHIB', network: 'Eth' },
 ];
+
+export const networkMappings: { [key: string]: string } = {
+  erc20: 'ETH',
+  trc20: 'TRX',
+  bsc: 'BSC',
+  sol: 'SOL',
+  matic: 'MATIC',
+  algo: 'ALGO',
+  arc20: 'AVAX',
+  arb: 'ARBITRUM',
+  op: 'OPTIMISM',
+  ton: 'TON',
+  celo: 'CELO',
+  base: 'BASE',
+  manta: 'MANTA',
+  lna: 'LNA',
+};

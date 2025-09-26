@@ -7,11 +7,10 @@ import {
 } from './provider.interface';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import { ConfigService } from '@nestjs/config';
 import { AFFILIATE_DATA } from './provider.data';
-import { CreateTransactionDto } from 'src/swapv2/dto/createTransaction.dto';
 import { TransactionResponse } from './provider.interface';
 import { CreateTransactionPayload } from 'src/swapv2/types/transaction';
+import { networkMappings } from 'utils/constants';
 
 interface ChangeNowCurrency {
   ticker: string;
@@ -98,7 +97,7 @@ export class ChangeNowProvider implements TokenProvider {
     try {
       const { data } = await firstValueFrom(
         this.httpService.get(
-          `${AFFILIATE_DATA.CHANGENOW.baseUrl}${tx_id}/${AFFILIATE_DATA.CHANGENOW.apiKey}`,
+          `${AFFILIATE_DATA.CHANGENOW.baseUrl}transactions/${tx_id}/${AFFILIATE_DATA.CHANGENOW.apiKey}`,
         ),
       );
 
@@ -123,6 +122,7 @@ export class ChangeNowProvider implements TokenProvider {
         receivingAddress: data.tokensDestination || null,
       };
     } catch (error) {
+      console.log({ error });
       console.log({ error: error.message });
       return {
         isError: true,
@@ -223,9 +223,10 @@ export class ChangeNowProvider implements TokenProvider {
 
       if (symbol && network) {
         tokens.push({
-          symbol: currency.ticker,
+          symbol: symbol,
+          aliasSymbol: currency.ticker, // ETHBSC ish USDTERC20 ish
           network: network,
-          alias: alias,
+          aliasNetwork: alias,
           iconUrl: currency.image,
           isActive: true,
         });
@@ -247,23 +248,6 @@ export class ChangeNowProvider implements TokenProvider {
     // "usdterc20" => USDT on ERC20
     // "etharb" => ETH on arbitrum
     // "bnbbsc" => BNB on BSC
-
-    const networkMappings: { [key: string]: string } = {
-      erc20: 'ETH',
-      trc20: 'TRX',
-      bsc: 'BSC',
-      sol: 'SOL',
-      matic: 'MATIC',
-      algo: 'ALGO',
-      arc20: 'AVAX',
-      arb: 'ARBITRUM',
-      op: 'OPTIMISM',
-      ton: 'TON',
-      celo: 'CELO',
-      base: 'BASE',
-      manta: 'MANTA',
-      lna: 'LNA',
-    };
 
     // Check if ticker contains a network suffix
     for (const [networkSuffix, networkName] of Object.entries(

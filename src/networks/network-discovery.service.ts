@@ -61,10 +61,6 @@ export class NetworkDiscoveryService {
 
     if (!existingNetwork) return;
 
-    // console.log('Aliases');
-    // console.log(existingNetwork.aliases);
-    // console.log(alias);
-    // Add the alias if it doesn't exist
     if (alias && !existingNetwork.aliases.includes(alias)) {
       existingNetwork.aliases.push(alias);
       this.logger.log(`Added Alias "${originalName}" to network`);

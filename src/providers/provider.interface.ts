@@ -14,9 +14,10 @@ export interface TokenProvider {
 
 export interface ProviderToken {
   symbol: string;
+  aliasSymbol?: string;
   network: string;
   name?: string;
-  alias?: string;
+  aliasNetwork?: string;
   isActive?: boolean;
   iconUrl?: string;
   providerMetadata?: any;

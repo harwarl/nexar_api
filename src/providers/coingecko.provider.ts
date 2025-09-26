@@ -111,7 +111,7 @@ export class CoingeckoProvider implements TokenProvider {
           tokens.push({
             symbol: coin.symbol.toUpperCase(),
             network: network,
-            alias: alias,
+            aliasNetwork: alias,
             name: coin.name,
             iconUrl: '',
             isActive: true,

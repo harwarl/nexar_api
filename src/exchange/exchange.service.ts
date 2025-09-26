@@ -242,6 +242,14 @@ export class ExchangeService {
     // find the best quote
     const bestQuote: ExchangeQuote = this.findBestQuote(providerQuotes.quotes);
 
+    // adjust all quotes
+    const quotes = providerQuotes.quotes.map((quote: ExchangeQuote) => {
+      return {
+        ...quote,
+        isBest: quote.uid === bestQuote.uid,
+      };
+    });
+
     if (!bestQuote) {
       throw new BadRequestException('No quotes found');
     }
@@ -260,7 +268,7 @@ export class ExchangeService {
       status: 'PENDING',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      quotes: providerQuotes.quotes,
+      quotes,
       bestQuote,
       uuid_request: request.uuid_request,
       errors: providerQuotes.error,

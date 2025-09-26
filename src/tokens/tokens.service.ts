@@ -153,6 +153,9 @@ export class TokensService implements OnModuleInit {
   }> {
     try {
       const tokens = await provider.fetchSupportedTokens();
+      console.log(
+        `============================${provider.name}=================================`,
+      );
       return { provider: provider.name, tokens };
     } catch (error) {
       this.logger.warn(
@@ -231,7 +234,7 @@ export class TokensService implements OnModuleInit {
 
       const tokenData = tokenMap.get(key);
       tokenData.providers[provider] = {
-        symbol: token.symbol,
+        symbol: token.aliasSymbol ?? token.symbol,
         isActive: token.isActive !== false,
       };
 

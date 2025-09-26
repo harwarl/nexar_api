@@ -1,6 +1,5 @@
 export enum AFFILIATES {
   EXOLIX = 'exolix',
-  // FIXED_FLOAT = 'fixedfloat',
   SWAPUZ = 'swapuz',
   SIMPLE_SWAP = 'simpleswap',
   CHANGENOW = 'changenow',
@@ -39,6 +38,24 @@ export const AFFILIATE_DATA = {
     apiKey: process.env.COINGECKO_API_KEY,
     endpoints: {
       tokens: '',
+    },
+  },
+  SWAPUZ: {
+    name: AFFILIATES.SWAPUZ,
+    baseUrl: process.env.SWAPUZ_API_URL,
+    apiKey: process.env.SWAPUZ_API_KEY,
+    endpoint: {
+      tokens: 'home/v1/coins',
+      getTransactions: '',
+    },
+  },
+  SIMPLESWAP: {
+    name: AFFILIATES.SIMPLE_SWAP,
+    baseUrl: process.env.SIMPLE_SWAP_API_URL,
+    apiKey: process.env.SIMPLE_SWAP_API_KEY,
+    endpoint: {
+      tokens: 'get_all_currencies',
+      getTransaction: '',
     },
   },
 };

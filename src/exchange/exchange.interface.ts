@@ -24,6 +24,7 @@ export interface ExchangeQuote {
   created_at: string;
   minAmount: string;
   maxAmount: string;
+  isBest?: boolean;
 }
 
 export interface ExchangeQuoteWithTxId extends ExchangeQuote {
