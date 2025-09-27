@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  FetchQuoteResponse,
   ProviderNetwork,
   ProviderToken,
   QuoteData,
@@ -30,18 +31,96 @@ export class SwapuzProvider implements TokenProvider {
     }
   }
 
-  async fetchQuote(getQuoteData: QuoteData): Promise<any> {
-    return;
-  }
+  async fetchQuote(getQuoteData: QuoteData): Promise<FetchQuoteResponse> {
+    try {
+      // First get the minAmount
+      const { data } = await firstValueFrom(
+        this.httpService.get(
+          `${AFFILIATE_DATA.SWAPUZ.baseUrl}home/v1/rate/?from=${getQuoteData.fromCurrency}&to=${getQuoteData.toCurrency}&amount=${getQuoteData.amount}&fromNetwork=${getQuoteData.fromNetwork}&toNetwork=${getQuoteData.toNetwork}&mode=float`,
+        ),
+      );
 
-  async fetchSupportedNetworks(): Promise<ProviderNetwork[]> {
-    return;
+      if (data.status === 200) {
+        return {
+          isError: false,
+          isMessage: false,
+          minAmount: data.result.minAmount,
+          maxAmount: data.result.maxAmount,
+          fromAmount: getQuoteData.amount,
+          toAmount: data.result.result,
+          rate: data.result.rate,
+          message: '',
+        };
+      }
+    } catch (error) {
+      console.log({ error });
+      if (error.response.data.error) {
+        return {
+          isError: true,
+          isMessage: true,
+          minAmount: 0,
+          maxAmount: 0,
+          fromAmount: getQuoteData.amount,
+          toAmount: 0,
+          rate: 0,
+          message: error.response.data.message ?? '',
+        };
+      }
+    }
   }
 
   async fetchTransactionByTransactionId(
     tx_id: string,
   ): Promise<TransactionResponse> {
-    return;
+    try {
+      const { data } = await firstValueFrom(
+        this.httpService.get(
+          `${AFFILIATE_DATA.SWAPUZ.baseUrl}order/uid/${tx_id}`,
+        ),
+      );
+
+      if (data.status === 200) {
+        return {
+          isError: false,
+          error: null,
+          txId: data.result.uid,
+          payinAddress: data.result.addressFrom,
+          payoutAddress: null,
+          fromCurrency: data.result.from.shortName,
+          toCurrency: data.result.to.shortName,
+          amount: data.result.amount,
+          amountToReceiver: data.result.amountResult,
+          refundAddress: data.result.addressRefund || null,
+          payinHash: data.result.depositTransactionID || null,
+          payoutHash: data.result.withdrawalTransactionID || null,
+          fromNetwork: data.result.addressFromNetwork || null,
+          toNetwork: data.result.addressToNetwork || null,
+          status: data.result.status, // TODO: some form of mapping for rthe 0s and 1s of the status
+          receivingAddress: data.result.addressTo || null,
+        };
+      }
+    } catch (error) {
+      console.log({ error });
+      console.log({ error: error.message });
+      return {
+        isError: true,
+        error: error.response?.data?.message || 'Failed to fetch transaction',
+        txId: null,
+        payinAddress: null,
+        payoutAddress: null,
+        fromCurrency: null,
+        toCurrency: null,
+        amount: null,
+        amountToReceiver: null,
+        refundAddress: null,
+        payinHash: null,
+        payoutHash: null,
+        fromNetwork: null,
+        toNetwork: null,
+        status: 'failed',
+        receivingAddress: null,
+      };
+    }
   }
 
   private transformSwapUzResponse(swapuzTokens: any[]): ProviderToken[] {

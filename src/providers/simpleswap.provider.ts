@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { ProviderToken, TokenProvider } from './provider.interface';
+import {
+  FetchQuoteResponse,
+  ProviderToken,
+  QuoteData,
+  TokenProvider,
+  TransactionResponse,
+} from './provider.interface';
 import { AFFILIATE_DATA } from './provider.data';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
@@ -26,6 +32,108 @@ export class SimpleSwapProvider implements TokenProvider {
       return this.transformSimpleSwapResponse(data);
     } catch (error) {
       throw new Error(`Failed to fetch ${this.name} tokens: ${error.message}`);
+    }
+  }
+
+  async fetchQuote(getQuoteData: QuoteData): Promise<FetchQuoteResponse> {
+    try {
+      // Get teh Min Max Amount
+      const { data: minMaxAmount } = await firstValueFrom(
+        this.httpService.get(
+          `${AFFILIATE_DATA.SIMPLESWAP.baseUrl}get_ranges?api_key=${AFFILIATE_DATA.SIMPLESWAP.apiKey}&fixed=false&currency_from=${getQuoteData.fromCurrency}&currency_to=${getQuoteData.toCurrency}`,
+        ),
+      );
+
+      // Get the rate
+      const { data: rate } = await firstValueFrom(
+        this.httpService.get(
+          `${AFFILIATE_DATA.SIMPLESWAP.baseUrl}get_exchange?api_key=${AFFILIATE_DATA.SIMPLESWAP.apiKey}`,
+        ),
+      );
+
+      // Get Estimated Amount
+      const { data: estimatedAmount } = await firstValueFrom(
+        this.httpService.get(
+          `${AFFILIATE_DATA.SIMPLESWAP.baseUrl}get_ranges?api_key=${AFFILIATE_DATA.SIMPLESWAP.apiKey}&fixed=false&currency_from=${getQuoteData.fromCurrency}&currency_to=${getQuoteData.toCurrency}&amount=${getQuoteData.amount.toString()}`,
+        ),
+      );
+
+      return {
+        isError: false,
+        isMessage: false,
+        minAmount: minMaxAmount.min,
+        maxAmount: minMaxAmount.max,
+        fromAmount: getQuoteData.amount,
+        toAmount: estimatedAmount,
+        rate: 0,
+        message: '',
+      };
+    } catch (error) {
+      console.log({ error });
+      if (error.response.data.error) {
+        return {
+          isError: true,
+          isMessage: true,
+          minAmount: 0,
+          maxAmount: 0,
+          fromAmount: getQuoteData.amount,
+          toAmount: 0,
+          rate: 0,
+          message: error.response.data.message ?? '',
+        };
+      }
+    }
+  }
+
+  async fetchTransactionByTransactionId(
+    tx_id: string,
+  ): Promise<TransactionResponse> {
+    try {
+      const { data } = await firstValueFrom(
+        this.httpService.get(
+          `${AFFILIATE_DATA.SIMPLESWAP.baseUrl}get_exchange?api_key=${AFFILIATE_DATA.SIMPLESWAP.apiKey}&id=${tx_id}`,
+        ),
+      );
+
+      return {
+        isError: false,
+        error: null,
+        txId: data.id,
+        payinAddress: data.address_from,
+        payoutAddress: data.payoutAddress ?? null,
+        fromCurrency: data.currency_from,
+        toCurrency: data.currency_to,
+        amount: data.expected_amount ? data.expected_amount : data.amount_from,
+        amountToReceiver: data.amount_to,
+        refundAddress: data.user_refund_address || null,
+        payinHash: data.tx_from || null,
+        payoutHash: data.tx_to || null,
+        fromNetwork: data[data.currency_from]['network'] || null,
+        toNetwork: data[data.currency_to]['network'] || null,
+        status: data.status,
+        receivingAddress: data.address_to || null,
+      };
+    } catch (error) {
+      console.log({ error });
+      console.log({ error: error.message });
+      return {
+        isError: true,
+        error: error.response?.data?.message || 'Failed to fetch transaction',
+        txId: null,
+        payinAddress: null,
+        payoutAddress: null,
+        fromCurrency: null,
+        toCurrency: null,
+        amount: null,
+        amountToReceiver: null,
+        refundAddress: null,
+        payinHash: null,
+        payoutHash: null,
+        fromNetwork: null,
+        toNetwork: null,
+        status: 'failed',
+        receivingAddress: null,
+      };
     }
   }
 
