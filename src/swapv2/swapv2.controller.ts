@@ -3,13 +3,7 @@ import { Swapv2Service } from './swapv2.service';
 import { GetTokensQueryDto } from './dto/getTokensQuery.dto';
 import { GetSwapRequestDto } from './dto/getSwapRequest.dto';
 import { StartSwapDto } from './dto/startSwap.dto';
-import {
-  ApiOperation,
-  ApiParam,
-  ApiResponse,
-  ApiSecurity,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { GetTransactionDto } from './dto/getTransaction.dto';
 
 @ApiTags('Swap V2')

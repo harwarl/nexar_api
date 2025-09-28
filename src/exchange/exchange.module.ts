@@ -8,6 +8,8 @@ import { HttpModule } from '@nestjs/axios';
 import { DatabaseModule } from 'src/database/database.module';
 import { QuoteProvider } from 'src/swapv2/schema/quote/quote.provider';
 import { TransactionProvidersV2 } from 'src/swapv2/schema/transaction/transaction.provider';
+import { SimpleSwapProvider } from 'src/providers/simpleswap.provider';
+import { SwapuzProvider } from 'src/providers/swapuz.provider';
 
 @Module({
   imports: [ProvidersModule, TokensModule, HttpModule, DatabaseModule],
@@ -15,6 +17,8 @@ import { TransactionProvidersV2 } from 'src/swapv2/schema/transaction/transactio
     ExchangeService,
     ExolixProvider,
     ChangeNowProvider,
+    SimpleSwapProvider,
+    SwapuzProvider, // TODO: add more providers in here
     ...QuoteProvider,
     ...TransactionProvidersV2,
   ],

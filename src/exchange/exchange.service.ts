@@ -29,6 +29,8 @@ import {
 } from 'src/swapv2/types/transaction';
 import { Quote } from 'src/swapv2/types/quote';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { SimpleSwapProvider } from 'src/providers/simpleswap.provider';
+import { SwapuzProvider } from 'src/providers/swapuz.provider';
 
 export interface ProviderSupport {
   provider: string;
@@ -47,6 +49,8 @@ export class ExchangeService {
     private readonly coingeckoProvider: CoingeckoProvider,
     private readonly exolixProvider: ExolixProvider,
     private readonly changeNowProvider: ChangeNowProvider,
+    private readonly simpleSwapProvider: SimpleSwapProvider,
+    private readonly swapUzProvider: SwapuzProvider,
     @Inject('QUOTE_MODEL') private quoteModel: Model<Quote>,
     @Inject('TRANSACTION_MODEL_V2')
     private transactionModelV2: Model<TransactionExchange>,
@@ -450,6 +454,18 @@ export class ExchangeService {
           await this.exolixProvider.fetchTransactionByTransactionId(txId);
         break;
 
+      case AFFILIATES.SIMPLE_SWAP:
+        transaction =
+          await this.simpleSwapProvider.fetchTransactionByTransactionId(txId);
+        break;
+
+      case AFFILIATES.SWAPUZ:
+        transaction =
+          await this.swapUzProvider.fetchTransactionByTransactionId(txId);
+        break;
+
+      // TODO: Add More Provider in here
+
       default:
         return null;
     }
@@ -546,7 +562,27 @@ export class ExchangeService {
                 });
                 break;
 
-              // Add more quotes in here
+              case AFFILIATES.SIMPLE_SWAP:
+                providerResponse = await this.simpleSwapProvider.fetchQuote({
+                  fromCurrency: fromToken.ticker_simpleswap,
+                  fromNetwork: fromToken.token_network.ticker_simpleswap,
+                  toCurrency: toToken.ticker_simpleswap,
+                  toNetwork: toToken.token_network.ticker_simpleswap,
+                  amount: fromAmount,
+                });
+                break;
+
+              case AFFILIATES.SWAPUZ:
+                providerResponse = await this.swapUzProvider.fetchQuote({
+                  fromCurrency: fromToken.ticker_swapuz,
+                  fromNetwork: fromToken.token_network.ticker_swapuz,
+                  toCurrency: toToken.ticker_swapuz,
+                  toNetwork: toToken.token_network.ticker_swapuz,
+                  amount: fromAmount,
+                });
+                break;
+
+              // TODO: Add more Provider QUotes in here
               default:
                 return null;
             }

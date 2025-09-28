@@ -10,7 +10,8 @@ import { AFFILIATE_DATA } from './provider.data';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { networkMappings } from 'utils/constants';
-import { symbol } from 'joi';
+import { v4 } from 'uuid';
+import { CreateTransactionPayload } from 'src/swapv2/types/transaction';
 
 @Injectable()
 export class SimpleSwapProvider implements TokenProvider {
@@ -44,17 +45,10 @@ export class SimpleSwapProvider implements TokenProvider {
         ),
       );
 
-      // Get the rate
-      const { data: rate } = await firstValueFrom(
-        this.httpService.get(
-          `${AFFILIATE_DATA.SIMPLESWAP.baseUrl}get_exchange?api_key=${AFFILIATE_DATA.SIMPLESWAP.apiKey}`,
-        ),
-      );
-
       // Get Estimated Amount
       const { data: estimatedAmount } = await firstValueFrom(
         this.httpService.get(
-          `${AFFILIATE_DATA.SIMPLESWAP.baseUrl}get_ranges?api_key=${AFFILIATE_DATA.SIMPLESWAP.apiKey}&fixed=false&currency_from=${getQuoteData.fromCurrency}&currency_to=${getQuoteData.toCurrency}&amount=${getQuoteData.amount.toString()}`,
+          `${AFFILIATE_DATA.SIMPLESWAP.baseUrl}get_estimated?api_key=${AFFILIATE_DATA.SIMPLESWAP.apiKey}&fixed=false&currency_from=${getQuoteData.fromCurrency}&currency_to=${getQuoteData.toCurrency}&amount=${getQuoteData.amount.toString()}`,
         ),
       );
 
@@ -65,7 +59,7 @@ export class SimpleSwapProvider implements TokenProvider {
         maxAmount: minMaxAmount.max,
         fromAmount: getQuoteData.amount,
         toAmount: estimatedAmount,
-        rate: 0,
+        rate: estimatedAmount / getQuoteData.amount,
         message: '',
       };
     } catch (error) {
@@ -133,6 +127,69 @@ export class SimpleSwapProvider implements TokenProvider {
         toNetwork: null,
         status: 'failed',
         receivingAddress: null,
+      };
+    }
+  }
+
+  async createTransaction(
+    createTransactionPayload: CreateTransactionPayload,
+  ): Promise<TransactionResponse> {
+    try {
+      const payload = {
+        fixed: false,
+        currency_from: createTransactionPayload.fromToken.ticker_simpleswap,
+        currency_to: createTransactionPayload.toToken.ticker_simpleswap,
+        amount: createTransactionPayload.amount,
+        address_to: createTransactionPayload.recipient_address,
+        user_refund_address: createTransactionPayload.refund_address,
+      };
+
+      const { data } = await firstValueFrom(
+        this.httpService.post(
+          `${AFFILIATE_DATA.SIMPLESWAP.baseUrl}create_exchange/?api_key=${AFFILIATE_DATA.SIMPLESWAP.apiKey}`,
+          payload,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+          },
+        ),
+      );
+
+      return {
+        isError: false,
+        txId: data.result.id,
+        error: null,
+        payinAddress: data.address_from,
+        payoutAddress: null,
+        refundAddress: data.user_refund_address ?? null,
+        fromCurrency: createTransactionPayload.fromToken.ticker_swapuz,
+        toCurrency: createTransactionPayload.toToken.ticker_swapuz,
+        amount: data.amount,
+        amountToReceiver: data.amount_to,
+        status: data.status,
+        payinHash: data.result.tx_from,
+        payoutHash: data.result.tx_to,
+        fromNetwork: createTransactionPayload.fromToken.network_name,
+        toNetwork: createTransactionPayload.toToken.network_name,
+      };
+    } catch (error) {
+      return {
+        isError: true,
+        error: error.message,
+        txId: null,
+        payinAddress: null,
+        payoutAddress: null,
+        status: 'failed',
+        fromCurrency: createTransactionPayload.fromToken.ticker_exolix,
+        toCurrency: createTransactionPayload.toToken.ticker_exolix,
+        amount: Number(createTransactionPayload.amount),
+        refundAddress: createTransactionPayload.refund_address || null,
+        payinHash: null,
+        payoutHash: null,
+        fromNetwork: '',
+        toNetwork: '',
       };
     }
   }

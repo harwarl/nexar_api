@@ -7,9 +7,11 @@ import {
   TokenProvider,
   TransactionResponse,
 } from './provider.interface';
-import { AFFILIATE_DATA, AFFILIATES } from './provider.data';
+import { v4 } from 'uuid';
+import { AFFILIATE_DATA } from './provider.data';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
+import { CreateTransactionPayload } from 'src/swapv2/types/transaction';
 
 @Injectable()
 export class SwapuzProvider implements TokenProvider {
@@ -119,6 +121,74 @@ export class SwapuzProvider implements TokenProvider {
         toNetwork: null,
         status: 'failed',
         receivingAddress: null,
+      };
+    }
+  }
+
+  async createTransaction(
+    createTransactionPayload: CreateTransactionPayload,
+  ): Promise<TransactionResponse> {
+    try {
+      const payload = {
+        from: createTransactionPayload.fromToken.ticker_swapuz,
+        fromNetwork:
+          createTransactionPayload.fromToken.token_network.ticker_swapuz,
+        to: createTransactionPayload.toToken.ticker_swapuz,
+        toNetwork: createTransactionPayload.toToken.token_network.ticker_swapuz,
+        address: createTransactionPayload.recipient_address,
+        amount: createTransactionPayload.amount,
+        uuid: v4(),
+      };
+
+      const { data } = await firstValueFrom(
+        this.httpService.post(
+          `${AFFILIATE_DATA.SWAPUZ.baseUrl}home/v1/order`,
+          payload,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              Authorization: AFFILIATE_DATA.EXOLIX.apiKey,
+            },
+          },
+        ),
+      );
+
+      if (data.status === 200) {
+        return {
+          isError: false,
+          txId: data.result.id,
+          error: null,
+          payinAddress: data.result.addressFrom,
+          payoutAddress: null,
+          refundAddress: null,
+          fromCurrency: createTransactionPayload.fromToken.ticker_swapuz,
+          toCurrency: createTransactionPayload.toToken.ticker_swapuz,
+          amount: data.result.amount,
+          amountToReceiver: data.result.amountResult,
+          status: data.result.status, // TODO: map this
+          payinHash: data.result.dTxId,
+          payoutHash: data.result.wTxId,
+          fromNetwork: data.result.addressFromNetwork,
+          toNetwork: data.result.addressToNetwork,
+        };
+      }
+    } catch (error) {
+      return {
+        isError: true,
+        error: error.message,
+        txId: null,
+        payinAddress: null,
+        payoutAddress: null,
+        status: 'failed',
+        fromCurrency: createTransactionPayload.fromToken.ticker_exolix,
+        toCurrency: createTransactionPayload.toToken.ticker_exolix,
+        amount: Number(createTransactionPayload.amount),
+        refundAddress: createTransactionPayload.refund_address || null,
+        payinHash: null,
+        payoutHash: null,
+        fromNetwork: '',
+        toNetwork: '',
       };
     }
   }
