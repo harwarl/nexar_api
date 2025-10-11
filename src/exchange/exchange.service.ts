@@ -71,6 +71,15 @@ export class ExchangeService {
     // check if the exchange request exists
     const exchangeRequest = this.exchangeRequests.get(startSwap.uuid_request);
 
+    // Check if the uuid_request is already in the data base, and throw error if yes
+    const isUsed = await this.transactionModelV2.find({
+      uuid_request: startSwap.uuid_request,
+    });
+
+    if (isUsed) {
+      throw new BadRequestException('Request id is in use');
+    }
+
     if (!exchangeRequest) {
       throw new BadRequestException(
         `Could not found the exchange with uuid ${startSwap.uuid_request}`,
@@ -110,6 +119,8 @@ export class ExchangeService {
     // Get the transaction Details from the provider and in it includes the transactionId
     const exchangeTransactionDetails: TransactionResponse =
       await this.getExchangeDetails(selectedQuote, updatedExchangeRequest);
+
+    console.log({ exchangeTransactionDetails });
 
     if (exchangeTransactionDetails.isError === true) {
       throw new BadRequestException(exchangeTransactionDetails.error);
@@ -317,8 +328,19 @@ export class ExchangeService {
         );
         break;
 
-      // TODO: add other exchange providers in here
+      case AFFILIATES.SIMPLE_SWAP:
+        exchangeDetails = await this.simpleSwapProvider.createTransaction(
+          createTransactionPayload,
+        );
+        break;
 
+      case AFFILIATES.SWAPUZ:
+        exchangeDetails = await this.swapUzProvider.createTransaction(
+          createTransactionPayload,
+        );
+        break;
+
+      // TODO: add other exchange providers in here
       default:
         exchangeDetails = null;
         break;

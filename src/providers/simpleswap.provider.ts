@@ -159,7 +159,7 @@ export class SimpleSwapProvider implements TokenProvider {
 
       return {
         isError: false,
-        txId: data.result.id,
+        txId: data.id,
         error: null,
         payinAddress: data.address_from,
         payoutAddress: null,
@@ -169,8 +169,8 @@ export class SimpleSwapProvider implements TokenProvider {
         amount: data.amount,
         amountToReceiver: data.amount_to,
         status: data.status,
-        payinHash: data.result.tx_from,
-        payoutHash: data.result.tx_to,
+        payinHash: data.tx_from,
+        payoutHash: data.tx_to,
         fromNetwork: createTransactionPayload.fromToken.network_name,
         toNetwork: createTransactionPayload.toToken.network_name,
       };

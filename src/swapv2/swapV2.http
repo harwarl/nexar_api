@@ -23,7 +23,7 @@ x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3Z
      "to_currency": "ETH",
      "to_network": "ETH",
      "init": true, 
-     "uuid_request": "4cb09216-6897-4fed-a4f6-8844366e688bd"
+     "uuid_request": "4cb09216-2233-4fed-a4f6-8444366e688bd"
 }
 
 ###
@@ -33,10 +33,11 @@ Accept: application/json
 x-api-key: OGQyNWI5YjZkZDIyMmIzNjoxNzYzMTYzMjQzNjgwOmU3Y2RlMDFjMmM1NDFjMTk5YzI3ZDBhZTYzOWU3NzEzNzAxMWRiYTI3MDNlZWQ0ODVhODI4YTgyYjBiODU2Yzg
 
 {
-     "uuid_request": "91b28175-bc6a-4db3-8eb8-17f38d33ab04",
-     "recipient_address": "0x925b098f9e5f2349926E1de19205b927237fbc46",
-     "selected_provider": "exolix",
-     "selected_quote_uid": "1758744145702-npgfubvo0"
+     "from_network": "ETH",
+     "recipient_address": "0x7e4D4DfddD4C2DD60f906418ADd8F78e4A714C28",
+     "selected_provider": "changenow",
+     "selected_quote_uid": "1759076597648-86nsb61d3",
+     "uuid_request": "e9470cee-b0e4-43d0-bc74-62e40c679682"
 }
 
 ### Get Transaction

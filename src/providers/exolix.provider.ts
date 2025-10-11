@@ -9,7 +9,6 @@ import {
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { AFFILIATE_DATA } from './provider.data';
-import { getQuote } from '@across-protocol/app-sdk';
 import { CreateTransactionDto } from 'src/swapv2/dto/createTransaction.dto';
 import { CreateTransactionPayload } from 'src/swapv2/types/transaction';
 
@@ -254,7 +253,6 @@ export class ExolixProvider implements TokenProvider {
           iconUrl: token.icon,
         });
       }
-      
     }
 
     return transformedTokens;
