@@ -7,7 +7,7 @@ use crate::provider::changenow::{
     ChangeNowClient,
     types::{
         CreatePrivateTransfer, PrivateTransfer, PrivateTransferEstimate,
-        PrivateTransferEstimateQuery,
+        PrivateTransferEstimateQuery, TransactionStatus,
     },
 };
 use crate::services::swap::{optional, required};
@@ -89,6 +89,16 @@ impl TransferService {
         };
 
         self.changenow.create_private_transfer(&transfer).await
+    }
+
+    /// Private transfers share ChangeNow's exchange status endpoint.
+    pub async fn get_transfer_details(&self, id: &str) -> Result<TransactionStatus, AppError> {
+        let id = id.trim();
+        if id.is_empty() {
+            return Err(AppError::BadRequest("id is required".into()));
+        }
+
+        self.changenow.exchange_status(id).await
     }
 }
 
@@ -271,5 +281,46 @@ mod tests {
                 .await,
             "toAmount",
         );
+    }
+
+    // ---------- details ----------
+
+    #[actix_web::test]
+    async fn get_transfer_details_fetches_by_id() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/exchange/by-id"))
+            .and(query_param("id", "366e345a27d6a1"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "id": "366e345a27d6a1", "status": "waiting", "actionsAvailable": false,
+                "fromCurrency": "usdt", "fromNetwork": "eth",
+                "toCurrency": "usdt", "toNetwork": "eth",
+                "fromLegacyTicker": "usdterc20", "toLegacyTicker": "usdterc20",
+                "expectedAmountFrom": 10.10113071, "expectedAmountTo": 10,
+                "amountFrom": null, "amountTo": null, "refundAmount": null,
+                "payinAddress": "0x5a96bFF5F7E6822F0f81a7100F6D98A486ff6537",
+                "payoutAddress": "0xD1220A0cf47c7B9Be7A2E6BA89F429762e7b9aDb",
+                "createdAt": "2026-10-22T10:00:00.000Z",
+                "updatedAt": "2026-10-22T10:00:00.000Z"
+            })))
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        let tx = service_for(&server)
+            .get_transfer_details(" 366e345a27d6a1 ")
+            .await
+            .unwrap();
+
+        assert_eq!(tx.id, "366e345a27d6a1");
+        assert!(!tx.status.is_terminal());
+    }
+
+    #[actix_web::test]
+    async fn get_transfer_details_requires_id() {
+        let server = MockServer::start().await;
+        mount_unreachable(&server).await;
+
+        expect_bad_request(service_for(&server).get_transfer_details("  ").await, "id");
     }
 }

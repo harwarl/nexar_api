@@ -11,37 +11,36 @@ use crate::provider::changenow::{
     },
 };
 
-// Tokens we list, matched against ChangeNow's v1-style `legacyTicker` (e.g. `usdterc20`),
-// since the v2 `ticker` alone is ambiguous across networks.
-const LISTED_TICKERS: &[&str] = &[
-    "sui",
-    "shib",
-    "floki",
-    "bonk",
-    "op",
-    "wbtcmatic",
-    "maticusdce",
-    "usdtmatic",
-    "opusdce",
-    "usdtop",
-    "ethop",
-    "daiop",
-    "matic",
-    "doge",
-    "pepe",
-    "avax",
-    "usdc",
-    "usdcbsc",
-    "usdctrc20",
-    "ton",
-    "xrp",
-    "near",
-    "ada",
-    "trump",
+// Tokens we list, as v2 `(ticker, network)` pairs; the ticker alone is ambiguous across networks.
+const LISTED_ASSETS: &[(&str, &str)] = &[
+    ("sui", "sui"),
+    ("shib", "eth"),
+    ("floki", "eth"),
+    ("bonk", "sol"),
+    ("op", "op"),
+    ("wbtc", "matic"),
+    ("maticusdce", "matic"),
+    ("usdt", "matic"),
+    ("opusdce", "op"),
+    ("usdt", "op"),
+    ("eth", "op"),
+    ("dai", "op"),
+    ("matic", "eth"),
+    ("doge", "doge"),
+    ("pepe", "eth"),
+    ("avax", "xchain"),
+    ("usdc", "eth"),
+    ("usdc", "bsc"),
+    ("usdc", "trx"),
+    ("ton", "ton"),
+    ("xrp", "xrp"),
+    ("near", "near"),
+    ("ada", "ada"),
+    ("trump", "sol"),
+    ("usdt", "eth"),
 ];
 const LISTED_NAMES: &[&str] = &["Bitcoin", "Solana", "Ethereum"];
 const LISTED_NAME_FRAGMENTS: &[&str] = &["BNB", "XRP"];
-const LISTED_TICKER_FRAGMENTS: &[&str] = &["usdterc20"];
 
 #[derive(Debug, Clone, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -192,11 +191,8 @@ impl SwapService {
 
 fn is_listed(c: &Currency) -> bool {
     LISTED_NAMES.contains(&c.name.as_str())
-        || LISTED_TICKERS.contains(&c.legacy_ticker.as_str())
+        || LISTED_ASSETS.contains(&(c.ticker.as_str(), c.network.as_str()))
         || LISTED_NAME_FRAGMENTS.iter().any(|f| c.name.contains(f))
-        || LISTED_TICKER_FRAGMENTS
-            .iter()
-            .any(|f| c.legacy_ticker.contains(f))
 }
 
 pub(crate) fn required(field: &str, value: &str) -> Result<String, AppError> {
@@ -272,7 +268,7 @@ mod tests {
         SwapService::new(ChangeNowClient::new(Some(server.uri()), "test-key".into()))
     }
 
-    fn currency(ticker: &str, legacy: &str, name: &str) -> Value {
+    fn currency(ticker: &str, network: &str, name: &str) -> Value {
         json!({
             "ticker": ticker,
             "name": name,
@@ -283,11 +279,11 @@ mod tests {
             "featured": false,
             "isStable": false,
             "supportsFixedRate": true,
-            "network": ticker,
+            "network": network,
             "tokenContract": null,
             "buy": true,
             "sell": true,
-            "legacyTicker": legacy
+            "legacyTicker": format!("{ticker}{network}")
         })
     }
 
@@ -343,19 +339,25 @@ mod tests {
             .and(query_param("active", "true"))
             .respond_with(ResponseTemplate::new(200).set_body_json(json!([
                 currency("btc", "btc", "Bitcoin"),
-                currency("usdt", "usdterc20", "Tether USD"),
-                currency("bnb", "bnbbsc", "BNB Smart Chain"),
-                currency("usdc", "usdcbsc", "USD Coin"),
-                currency("xyz", "xyz", "Some Token"),
-                currency("usdt", "usdttrc20", "Tether USD"),
+                currency("usdt", "eth", "Tether USD"),
+                currency("bnb", "bsc", "BNB Smart Chain"),
+                currency("usdc", "bsc", "USD Coin"),
+                currency("xyz", "eth", "Some Token"),
+                currency("usdt", "trx", "Tether USD"),
             ])))
             .mount(&server)
             .await;
 
         let tokens = service_for(&server).get_tokens().await.unwrap();
-        let legacy: Vec<_> = tokens.iter().map(|t| t.legacy_ticker.as_str()).collect();
+        let listed: Vec<_> = tokens
+            .iter()
+            .map(|t| (t.ticker.as_str(), t.network.as_str()))
+            .collect();
 
-        assert_eq!(legacy, ["btc", "usdterc20", "bnbbsc", "usdcbsc"]);
+        assert_eq!(
+            listed,
+            [("btc", "btc"), ("usdt", "eth"), ("bnb", "bsc"), ("usdc", "bsc")]
+        );
     }
 
     // ---------- minimal amount ----------

@@ -1,9 +1,10 @@
 use actix_web::{Responder, get, post, web};
 
+use super::swap::TransactionQuery;
 use crate::{
     error::AppError,
     models::ApiResponse,
-    provider::changenow::types::{PrivateTransfer, PrivateTransferEstimate},
+    provider::changenow::types::{PrivateTransfer, PrivateTransferEstimate, TransactionStatus},
     services::{
         TransferService,
         transfer::{CreateTransferRequest, TransferEstimateQuery},
@@ -49,5 +50,25 @@ pub async fn create_transfer(
     body: web::Json<CreateTransferRequest>,
 ) -> Result<impl Responder, AppError> {
     let res = transfer.create_transfer(body.into_inner()).await?;
+    Ok(web::Json(ApiResponse::success(res)))
+}
+
+/// Get the status and details of a private transfer.
+#[utoipa::path(
+    tag = "transfer",
+    params(TransactionQuery),
+    responses(
+        (status = 200, description = "Private transfer details", body = ApiResponse<TransactionStatus>),
+        (status = 400, description = "Missing id", body = String, content_type = "text/html"),
+        (status = 404, description = "Transfer not found", body = String, content_type = "text/html"),
+        (status = 500, description = "Upstream provider error", body = String, content_type = "text/html"),
+    )
+)]
+#[get("/transfer-details")]
+pub async fn get_transfer_details(
+    transfer: web::Data<TransferService>,
+    query: web::Query<TransactionQuery>,
+) -> Result<impl Responder, AppError> {
+    let res = transfer.get_transfer_details(&query.id).await?;
     Ok(web::Json(ApiResponse::success(res)))
 }

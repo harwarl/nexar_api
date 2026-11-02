@@ -21,7 +21,11 @@ struct HealthApi;
 struct SwapApi;
 
 #[derive(OpenApi)]
-#[openapi(paths(transfer::get_estimate, transfer::create_transfer))]
+#[openapi(paths(
+    transfer::get_estimate,
+    transfer::create_transfer,
+    transfer::get_transfer_details,
+))]
 struct TransferApi;
 
 #[derive(OpenApi)]
@@ -59,6 +63,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
                 web::scope("/transfer")
                     .service(transfer::get_estimate)
                     .service(transfer::create_transfer)
+                    .service(transfer::get_transfer_details)
             )
     );
 }
