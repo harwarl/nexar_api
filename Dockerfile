@@ -1,25 +1,46 @@
-FROM node:lts-alpine
+# ── Build stage ─────────────────────────────────────────────────────────────
+FROM rust:1.90-slim-bookworm AS builder
 
-# Set working directory
+# aws-lc-sys (pulled in by rustls) needs a C toolchain and cmake to build;
+# utoipa-swagger-ui's build script downloads Swagger UI with curl.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential cmake clang pkg-config curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-# Copy only package files first to leverage Docker cache
-COPY package*.json ./
+# Build dependencies first against stub sources so they're cached until
+# Cargo.toml / Cargo.lock change.
+COPY Cargo.toml Cargo.lock ./
+RUN mkdir src \
+    && echo "fn main() {}" > src/main.rs \
+    && touch src/lib.rs \
+    && cargo build --release --locked \
+    && rm -rf src
 
-# Install all dependencies, including devDependencies for build
-RUN npm install
+COPY src ./src
+# Bump mtimes so cargo rebuilds the real crate instead of the cached stub.
+RUN touch src/main.rs src/lib.rs \
+    && cargo build --release --locked
 
-# Copy the full project
-COPY . .
+# ── Runtime stage ───────────────────────────────────────────────────────────
+FROM debian:bookworm-slim AS runtime
 
-# Build the NestJS project (transpiles TypeScript to JS in dist/)
-RUN npm run build
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --system --uid 10001 --no-create-home nexar
 
-# Remove devDependencies after build to reduce image size
-RUN npm prune --production
+# Binary is named after the Cargo package (`rust_be`).
+COPY --from=builder /app/target/release/rust_be /usr/local/bin/nexar
 
-# Expose port
-EXPOSE 3000
+USER nexar
+# Config defaults HOST to 127.0.0.1, which is unreachable from outside the container.
+ENV HOST=0.0.0.0
+ENV PORT=8080
+EXPOSE 8080
 
-# Start production server
-CMD ["npm", "run", "start:prod"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl -fsS "http://127.0.0.1:${PORT}/api/v1/health" || exit 1
+
+CMD ["nexar"]
